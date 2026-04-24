@@ -23,26 +23,29 @@ class ErrorBoundary extends Component<
 
   render() {
     if (this.state.error) {
+      const isDev = import.meta.env.DEV;
       return (
         <div style={{ padding: 32, fontFamily: "monospace", maxWidth: 600, margin: "0 auto" }}>
           <h2 style={{ color: "#dc2626", marginBottom: 8 }}>Erreur au démarrage</h2>
           <p style={{ marginBottom: 12, color: "#555" }}>
-            L'application a rencontré une erreur critique. Détails :
+            L'application a rencontré une erreur critique. Veuillez recharger la page.
           </p>
-          <pre style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: 16,
-            borderRadius: 8,
-            overflow: "auto",
-            fontSize: 13,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-          }}>
-            {this.state.error.name}: {this.state.error.message}
-            {"\n\n"}
-            {this.state.error.stack}
-          </pre>
+          {isDev && (
+            <pre style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: 16,
+              borderRadius: 8,
+              overflow: "auto",
+              fontSize: 13,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            }}>
+              {this.state.error.name}: {this.state.error.message}
+              {"\n\n"}
+              {this.state.error.stack}
+            </pre>
+          )}
         </div>
       );
     }

@@ -419,7 +419,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const saveCoupleInviteCode = async (): Promise<string> => {
-    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+    const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const MAX_UNBIASED = 256 - (256 % CHARS.length);
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const code = Array.from(bytes)
+      .filter((b) => b < MAX_UNBIASED)
+      .slice(0, 8)
+      .map((b) => CHARS[b % CHARS.length])
+      .join("");
     if (user) {
       await update(ref(db, `users/${user.uid}/couple`), {
         inviteCode: code,

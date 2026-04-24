@@ -252,14 +252,25 @@ export function FirebaseDataProvider({ userId, children }: Props) {
 
   const importAll = useCallback(
     (file: File) => {
+      if (!file.name.endsWith(".json") && file.type !== "application/json") {
+        alert("Fichier invalide. Seuls les fichiers .json sont acceptés.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Fichier trop volumineux (max 5 Mo).");
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const backup = JSON.parse(e.target?.result as string);
-          if (backup.financeData) saveFinanceData(backup.financeData);
-          if (backup.monthlyHistory) saveMonthlyHistory(backup.monthlyHistory);
-          if (backup.rewardsData) saveRewardsData(backup.rewardsData);
-          if (backup.challengesData) saveChallengesData(backup.challengesData);
+          if (typeof backup !== "object" || backup === null || Array.isArray(backup)) {
+            throw new Error("Format de sauvegarde invalide.");
+          }
+          if (backup.financeData && typeof backup.financeData === "object") saveFinanceData(backup.financeData);
+          if (backup.monthlyHistory && typeof backup.monthlyHistory === "object") saveMonthlyHistory(backup.monthlyHistory);
+          if (backup.rewardsData && typeof backup.rewardsData === "object") saveRewardsData(backup.rewardsData);
+          if (backup.challengesData && typeof backup.challengesData === "object") saveChallengesData(backup.challengesData);
           setTimeout(() => window.location.reload(), 1200);
         } catch (err) {
           console.error("Failed to restore backup", err);
