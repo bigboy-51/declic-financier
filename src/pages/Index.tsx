@@ -1,8 +1,6 @@
 import { DashboardHero } from "@/components/DashboardHero";
-import { Challenges } from "@/components/Challenges";
-import { Couple } from "@/components/Couple";
 import { LogOut, Heart, Settings, X } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { Home, CreditCard, Receipt, RotateCcw, Swords, PiggyBank, Lock, ShoppingCart } from "lucide-react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useMonthlyData } from "@/hooks/useMonthlyData";
@@ -10,9 +8,13 @@ import { useRewards } from "@/hooks/useRewards";
 import { useChallenges } from "@/hooks/useChallenges";
 import { MonthlyReset } from "@/components/MonthlyReset";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
-import { Credits } from "@/components/Credits";
-import ChargesTab from "@/components/ChargesTab";
-import BudgetCoursesTab from "@/components/BudgetCoursesTab";
+
+const Credits = lazy(() => import("@/components/Credits").then((m) => ({ default: m.Credits })));
+const ChargesTab = lazy(() => import("@/components/ChargesTab"));
+const BudgetCoursesTab = lazy(() => import("@/components/BudgetCoursesTab"));
+const Challenges = lazy(() => import("@/components/Challenges").then((m) => ({ default: m.Challenges })));
+const Couple = lazy(() => import("@/components/Couple").then((m) => ({ default: m.Couple })));
+const Savings = lazy(() => import("@/components/Savings").then((m) => ({ default: m.Savings })));
 import { ChargesDashboardWidget } from "@/components/ChargesDashboardWidget";
 import { BudgetCoursesDashboardWidget } from "@/components/BudgetCoursesDashboardWidget";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +28,6 @@ import { CoupleProfileModal } from "@/components/CoupleProfileModal";
 import { getProfile } from "@/lib/profiles";
 import { MessageToast } from "@/components/MessageToast";
 import { SetupWizard } from "@/components/SetupWizard";
-import { Savings } from "@/components/Savings";
 import { EscalationSystem, EscalationDashboardCard, EscalationBanner } from "@/components/EscalationSystem";
 import { usePerProfileEscalation } from "@/hooks/usePerProfileEscalation";
 import type { ProfileType } from "@/lib/profiles";
@@ -1001,6 +1002,7 @@ function AppMain() {
       )}
 
       <main className="px-3 md:px-6 py-4 md:py-8 max-w-2xl mx-auto">
+        <Suspense fallback={<div className="flex justify-center py-16"><div className="text-3xl animate-pulse">⏳</div></div>}>
         {activeTab === "dashboard" && showE2Card && (
           <EscalationDashboardCard
             skipCount={perEscalation.skipCount}
@@ -1228,6 +1230,7 @@ function AppMain() {
         {activeTab === "courses" && (
           <BudgetCoursesTab />
         )}
+        </Suspense>
       </main>
 
       {showReset && (
