@@ -46,7 +46,8 @@ const AddCourseModal = ({
   onAdd: (date: string, montant: number, moyenPaiement: MoyenPaiement) => void;
   onClose: () => void;
 }) => {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const _today = new Date();
+  const [date, setDate] = useState(`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`);
   const [montant, setMontant] = useState("");
   const [paiement, setPaiement] = useState<MoyenPaiement>("CB");
 
@@ -409,7 +410,7 @@ export default function BudgetCoursesTab() {
             {Array.from({ length: 7 }, (_, i) => {
               const dayDate = new Date(weekAnchor);
               dayDate.setDate(dayDate.getDate() + i);
-              const dayStr = dayDate.toISOString().split("T")[0];
+              const dayStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth()+1).padStart(2,'0')}-${String(dayDate.getDate()).padStart(2,'0')}`;
               const dayTotal = weekCourses
                 .filter((c) => c.date === dayStr)
                 .reduce((s, c) => s + c.montant, 0);
