@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ref, set, remove } from "firebase/database";
+import { ref, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
@@ -7,6 +7,7 @@ import { useChargesData, FlatCharge } from "@/hooks/useChargesData";
 import { useChargesSummary } from "@/hooks/useChargesSummary";
 import { ChargesRecap } from "@/components/ChargesRecap";
 import { migrateChargesToFirebase } from "@/utils/migrateCharges";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 function fmt(n: number): string {
@@ -100,22 +101,26 @@ function ChargeRow({ charge, onUpdateReel, onDelete }: ChargeRowProps) {
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState(String(charge.reel));
   const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef(false);
 
   const handleStartEdit = () => {
+    committedRef.current = false;
     setEditVal(String(charge.reel));
     setEditing(true);
     setTimeout(() => inputRef.current?.select(), 30);
   };
 
   const handleCommit = () => {
+    if (committedRef.current) return;
+    committedRef.current = true;
     const v = parseFloat(editVal) || 0;
     setEditing(false);
-    if (v !== charge.reel) onUpdateReel(charge, v);
+    onUpdateReel(charge, v);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") { e.preventDefault(); handleCommit(); }
-    if (e.key === "Escape") { setEditing(false); setEditVal(String(charge.reel)); }
+    if (e.key === "Escape") { committedRef.current = true; setEditing(false); setEditVal(String(charge.reel)); }
   };
 
   const restant  = charge.prevu - charge.reel;
@@ -297,6 +302,7 @@ function CategorySection({ categoryId, name, icon, charges, onUpdateReel, onAddC
 export default function ChargesTab() {
   const { user }                        = useAuth();
   const { charges, loading }            = useChargesData();
+  const { toast }                       = useToast();
   const [addModal, setAddModal]         = useState<{ categoryId: string; categoryName: string } | null>(null);
   const [confirmDel, setConfirmDel]     = useState<FlatCharge | null>(null);
 
@@ -318,11 +324,14 @@ export default function ChargesTab() {
 
   const handleUpdateReel = async (charge: FlatCharge, newReel: number) => {
     if (!user) return;
-    const montantRestant = parseFloat((charge.prevu - newReel).toFixed(2));
+    const reel = parseFloat(newReel.toFixed(2));
+    const restant = parseFloat((charge.prevu - newReel).toFixed(2));
     const path = `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`;
-    await set(ref(db, `${path}/reel`), parseFloat(newReel.toFixed(2)));
-    await set(ref(db, `${path}/restant`), montantRestant);
-    await set(ref(db, `${path}/updatedAt`), new Date().toISOString());
+    try {
+      await update(ref(db, path), { reel, restant, updatedAt: new Date().toISOString() });
+    } catch {
+      toast({ description: "❌ Erreur lors de la sauvegarde", variant: "destructive" });
+    }
   };
 
   const handleAddCharge = async (categoryId: string, name: string, prevu: number) => {
