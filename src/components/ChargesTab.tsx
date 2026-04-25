@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ref, update, remove } from "firebase/database";
+import { ref, set, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { CHARGE_CATEGORIES } from "@/constants/chargeCategories";
