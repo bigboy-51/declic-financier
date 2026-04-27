@@ -163,3 +163,79 @@ export const migrateRemainingGroceries = async (): Promise<{ success: boolean; m
     return { success: false, migrated: 0 };
   }
 };
+
+// Migration V3 : force re-migration en gérant tous les formats de date possibles
+export const migrateGroceryV3 = async (): Promise<{ success: boolean; migrated: number }> => {
+  const user = auth.currentUser;
+  if (!user) return { success: false, migrated: 0 };
+
+  try {
+    const userRef  = ref(db, `users/${user.uid}`);
+    const userSnap = await get(userRef);
+    if (userSnap.val()?.groceryMigrationV3Done) return { success: false, migrated: 0 };
+
+    const grocerySnap = await get(ref(db, `users/${user.uid}/finances/groceryExpenses`));
+    const rawGrocery  = grocerySnap.val();
+
+    if (!rawGrocery) {
+      await update(userRef, { groceryMigrationV3Done: true });
+      return { success: true, migrated: 0 };
+    }
+
+    const allEntries: Array<Record<string, unknown>> = Array.isArray(rawGrocery)
+      ? rawGrocery.filter(Boolean)
+      : Object.entries(rawGrocery).map(([k, v]) => ({ _key: k, ...(v as object) }));
+
+    // Log la structure des 3 premières entrées pour debug
+    console.log("🔍 Structure groceryExpenses (3 premières):", JSON.stringify(allEntries.slice(0, 3), null, 2));
+
+    const existingSnap = await get(ref(db, `users/${user.uid}/budgetCourses`));
+    const existing = existingSnap.val() ?? {};
+    const alreadyMigratedIds = new Set(
+      Object.values(existing).map((e: any) => e.originalGroceryId).filter(Boolean)
+    );
+
+    const toMigrate = allEntries.filter((item) => {
+      const id = String(item._key ?? item.id ?? "");
+      if (alreadyMigratedIds.has(id)) return false;
+      // Accepte n'importe quel champ de date non vide
+      const dateVal = item.dateISO ?? item.date ?? item.createdAt ?? item.timestamp;
+      return !!dateVal;
+    });
+
+    console.log(`📊 Migration V3 : ${toMigrate.length} entrées à migrer`);
+
+    if (toMigrate.length === 0) {
+      await update(userRef, { groceryMigrationV3Done: true });
+      return { success: true, migrated: 0 };
+    }
+
+    const now = new Date().toISOString();
+    const writes = toMigrate.map((item) => {
+      const id       = String(item._key ?? item.id ?? Date.now());
+      const dateVal  = String(item.dateISO ?? item.date ?? item.createdAt ?? item.timestamp ?? "");
+      // Normalise en YYYY-MM-DD
+      const dateStr  = dateVal.length >= 10 ? dateVal.slice(0, 10) : dateVal;
+      const entryId  = `migrated-v3-${id}-${Math.random().toString(36).slice(2, 6)}`;
+      return set(ref(db, `users/${user.uid}/budgetCourses/${entryId}`), {
+        date:              dateStr,
+        montant:           Number(item.amount ?? item.montant ?? 0),
+        moyenPaiement:     String(item.moyenPaiement ?? "Cash"),
+        label:             String(item.label ?? item.name ?? ""),
+        createdAt:         now,
+        updatedAt:         now,
+        source:            "migrated-v3",
+        originalGroceryId: id,
+      });
+    });
+
+    await Promise.all(writes);
+    await update(userRef, { groceryMigrationV3Done: true });
+
+    console.log(`✅ Migration V3 réussie : ${toMigrate.length} courses récupérées`);
+    return { success: true, migrated: toMigrate.length };
+  } catch (error) {
+    console.error("❌ Erreur migration V3:", error);
+    return { success: false, migrated: 0 };
+  }
+};
