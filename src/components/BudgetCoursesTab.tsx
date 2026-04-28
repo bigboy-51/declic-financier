@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useBudgetCourses } from "@/hooks/useBudgetCourses";
 import { useToast } from "@/hooks/use-toast";
-import { migrateRemainingGroceries, migrateGroceryV3, migrateGroceryV4, debugGroceryData, fixPaymentMethods } from "@/utils/migrateGrocery";
+import { fixPaymentMethods } from "@/utils/migrateGrocery";
 
 type MoyenPaiement = "CB" | "Cash" | "Retrait" | "Chèque";
 
@@ -168,16 +168,6 @@ export default function BudgetCoursesTab() {
       setSettingsLoading(false);
     };
     load();
-    migrateRemainingGroceries().then((res) => {
-      if (res.migrated > 0) console.log(`✅ ${res.migrated} courses récupérées`);
-    });
-    migrateGroceryV3().then((res) => {
-      if (res.migrated > 0) console.log(`✅ V3: ${res.migrated} courses récupérées`);
-    });
-    migrateGroceryV4().then((res) => {
-      if (res.migrated > 0) console.log(`✅ V4: ${res.migrated} courses récupérées`);
-    });
-    debugGroceryData();
     fixPaymentMethods();
   }, [user]);
 
