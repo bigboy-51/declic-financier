@@ -7,6 +7,7 @@ const NEW_CHARGES = [
   { id: "sncf",         name: "SNCF",          categoryId: "transport", prevu: 0 },
   { id: "darty-serv",   name: "Darty Serv.",   categoryId: "divers",    prevu: 0 },
   { id: "darty",        name: "Darty",         categoryId: "divers",    prevu: 0 },
+  { id: "travaux",      name: "Travaux",        categoryId: "logement",  prevu: 0 },
 ];
 
 const AMOUNT_FIXES: Array<{ id: string; categoryId: string; prevu: number }> = [
@@ -20,7 +21,7 @@ export const patchCharges = async (): Promise<void> => {
 
   const userRef = ref(db, `users/${user.uid}`);
   const userSnap = await get(userRef);
-  if (userSnap.val()?.chargesPatchV1Done) return;
+  if (userSnap.val()?.chargesPatchV2Done) return;
 
   const now = new Date().toISOString();
   const writes: Promise<void>[] = [];
@@ -58,5 +59,5 @@ export const patchCharges = async (): Promise<void> => {
   }
 
   await Promise.all(writes);
-  await update(userRef, { chargesPatchV1Done: true });
+  await update(userRef, { chargesPatchV1Done: true, chargesPatchV2Done: true });
 };
