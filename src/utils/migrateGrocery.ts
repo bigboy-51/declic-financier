@@ -1,6 +1,25 @@
 import { auth, db } from "@/lib/firebase";
 import { ref, get, set, update } from "firebase/database";
 
+export const debugGroceryData = async (): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) { console.log("❌ debug: pas d'utilisateur"); return; }
+  const grocerySnap = await get(ref(db, `users/${user.uid}/finances/groceryExpenses`));
+  const raw = grocerySnap.val();
+  console.log("🔍 groceryExpenses raw:", raw ? `${Object.keys(raw).length} entrées` : "null");
+  if (raw) console.log("🔍 Exemple (1ère entrée):", JSON.stringify(Object.values(raw)[0], null, 2));
+  const coursesSnap = await get(ref(db, `users/${user.uid}/budgetCourses`));
+  const courses = coursesSnap.val();
+  console.log("🔍 budgetCourses:", courses ? `${Object.keys(courses).length} entrées` : "null");
+  const flagsSnap = await get(ref(db, `users/${user.uid}`));
+  const flags = flagsSnap.val();
+  console.log("🔍 flags migration:", {
+    v1: flags?.groceryMigrationDone,
+    v2: flags?.groceryMigrationV2Done,
+    v3: flags?.groceryMigrationV3Done,
+  });
+};
+
 export const migrateGroceryToBudgetCourses = async (): Promise<{ success: boolean; migrated: number }> => {
   const user = auth.currentUser;
   if (!user) {
