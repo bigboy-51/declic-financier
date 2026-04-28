@@ -18,6 +18,8 @@ const Couple = lazy(() => import("@/components/Couple").then((m) => ({ default: 
 const Savings = lazy(() => import("@/components/Savings").then((m) => ({ default: m.Savings })));
 import { ChargesDashboardWidget } from "@/components/ChargesDashboardWidget";
 import { BudgetCoursesDashboardWidget } from "@/components/BudgetCoursesDashboardWidget";
+import { useChargesData } from "@/hooks/useChargesData";
+import { useBudgetCourses } from "@/hooks/useBudgetCourses";
 import { useToast } from "@/hooks/use-toast";
 import { ToastContainer } from "@/components/ToastContainer";
 import { useAuth } from "@/context/AuthContext";
@@ -380,6 +382,8 @@ function AppMain() {
 
   const monthlyData = useMonthlyData(monthlyHistory, saveMonthlyHistory);
   const rewards = useRewards(data.credits, data.expenses, rewardsData, saveRewardsData);
+  const { charges } = useChargesData();
+  const { totalGlobal: coursesTotal } = useBudgetCourses();
   const { toasts, toast, dismiss } = useToast();
 
   useEffect(() => {
@@ -415,22 +419,20 @@ function AppMain() {
       (sum, i) => sum + (i.receivedDate ? i.amount : 0),
       0,
     );
-    const grocerySpent = data.groceryExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const regularSpent = data.expenses
-      .filter((e) => e.category !== "remboursements")
-      .reduce((sum, e) => sum + e.actualAmount, 0);
-    const reimbursementsReceived = data.expenses
-      .filter((e) => e.category === "remboursements")
-      .reduce((sum, e) => sum + e.actualAmount, 0);
-    const fixedSpent = regularSpent - reimbursementsReceived;
+    // Charges réelles payées ce cycle (nouveau système)
+    const chargesReel = charges.reduce((sum, c) => sum + c.reel, 0);
+    // Courses dépensées ce cycle (nouveau système)
+    const creditPayments = data.credits
+      .filter((c) => !c.settled)
+      .reduce((sum, c) => sum + c.monthlyPayment, 0);
     return (
       data.startingBalance +
       receivedSalaries -
-      grocerySpent -
-      fixedSpent -
-      (data.appliedCreditsAmount ?? 0)
+      chargesReel -
+      coursesTotal -
+      creditPayments
     );
-  }, [data]);
+  }, [data, charges, coursesTotal]);
 
   const totalDebt = data.credits.reduce(
     (sum, c) => sum + (c.settled ? 0 : c.remainingAmount),
@@ -1021,6 +1023,7 @@ function AppMain() {
               groceryBudget={data.groceryBudget}
               surplus={surplus}
               startingBalance={data.startingBalance}
+              dynamicBalance={dynamicBalance}
               incomes={data.incomes}
               credits={data.credits}
               projection={projection}
