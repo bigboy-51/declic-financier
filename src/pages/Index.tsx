@@ -1,4 +1,5 @@
 import { DashboardHero } from "@/components/DashboardHero";
+import { DettesDashboardWidget } from "@/components/DettesDashboardWidget";
 import { LogOut, Heart, Settings, X } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { Home, CreditCard, Receipt, RotateCcw, Swords, PiggyBank, Lock, ShoppingCart } from "lucide-react";
@@ -1072,6 +1073,12 @@ function AppMain() {
               <ChargesDashboardWidget onNavigateToCharges={() => setActiveTab("expenses")} />
             )}
             <BudgetCoursesDashboardWidget onNavigateToCourses={() => setActiveTab("courses")} />
+            <DettesDashboardWidget
+              totalDebt={totalDebt}
+              monthlyPayment={totalCredits}
+              credits={data.credits}
+              projection={projection}
+            />
             <MonthlyReset
               currentMonth={monthlyData.currentMonth}
               credits={data.credits}
@@ -1094,14 +1101,6 @@ function AppMain() {
                   updateExpense(expense.id, { actualAmount: 0 });
                 });
               }}
-            />
-            <MonthlyHistory
-              monthlyHistory={monthlyData.monthlyHistory}
-              currentMonth={monthlyData.currentMonth}
-              allMonths={monthlyData.getAllMonths()}
-              getMonthComparison={monthlyData.getMonthComparison}
-              calculateDebtFreeProjection={monthlyData.calculateDebtFreeProjection}
-              credits={data.credits}
             />
           </>
         )}
