@@ -7,14 +7,20 @@ export const debugGroceryData = async (): Promise<void> => {
   const snap = await get(ref(db, `users/${user.uid}/debt_snowball_data`));
   const raw = snap.val();
   const groceries = raw?.groceryExpenses;
-  console.log("🔍 groceryExpenses (debt_snowball_data):", groceries ? `${Array.isArray(groceries) ? groceries.length : Object.keys(groceries).length} entrées` : "null");
-  if (groceries) {
-    const first = Array.isArray(groceries) ? groceries[0] : Object.values(groceries)[0];
-    console.log("🔍 Exemple (1ère entrée):", JSON.stringify(first, null, 2));
-  }
+  const groceryArr: any[] = Array.isArray(groceries) ? groceries.filter(Boolean) : Object.values(groceries ?? {});
+  const totalGroceries = groceryArr.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  console.log(`🔍 groceryExpenses: ${groceryArr.length} entrées, total: ${totalGroceries.toFixed(2)}€`);
   const coursesSnap = await get(ref(db, `users/${user.uid}/budgetCourses`));
-  const courses = coursesSnap.val();
-  console.log("🔍 budgetCourses:", courses ? `${Object.keys(courses).length} entrées` : "null");
+  const courses = coursesSnap.val() ?? {};
+  const coursesArr: any[] = Object.values(courses);
+  const totalCourses = coursesArr.reduce((s: number, e: any) => s + (Number(e.montant) || 0), 0);
+  const byMonth: Record<string, number> = {};
+  for (const e of coursesArr) {
+    const key = (e.date ?? "").slice(0, 7);
+    byMonth[key] = (byMonth[key] ?? 0) + (Number(e.montant) || 0);
+  }
+  console.log(`🔍 budgetCourses: ${coursesArr.length} entrées, total: ${totalCourses.toFixed(2)}€`);
+  console.log(`🔍 Par mois:`, byMonth);
 };
 
 export const migrateGroceryToBudgetCourses = async (): Promise<{ success: boolean; migrated: number }> => {
