@@ -4,20 +4,17 @@ import { ref, get, set, update } from "firebase/database";
 export const debugGroceryData = async (): Promise<void> => {
   const user = auth.currentUser;
   if (!user) { console.log("❌ debug: pas d'utilisateur"); return; }
-  const grocerySnap = await get(ref(db, `users/${user.uid}/finances/groceryExpenses`));
-  const raw = grocerySnap.val();
-  console.log("🔍 groceryExpenses raw:", raw ? `${Object.keys(raw).length} entrées` : "null");
-  if (raw) console.log("🔍 Exemple (1ère entrée):", JSON.stringify(Object.values(raw)[0], null, 2));
+  const snap = await get(ref(db, `users/${user.uid}/debt_snowball_data`));
+  const raw = snap.val();
+  const groceries = raw?.groceryExpenses;
+  console.log("🔍 groceryExpenses (debt_snowball_data):", groceries ? `${Array.isArray(groceries) ? groceries.length : Object.keys(groceries).length} entrées` : "null");
+  if (groceries) {
+    const first = Array.isArray(groceries) ? groceries[0] : Object.values(groceries)[0];
+    console.log("🔍 Exemple (1ère entrée):", JSON.stringify(first, null, 2));
+  }
   const coursesSnap = await get(ref(db, `users/${user.uid}/budgetCourses`));
   const courses = coursesSnap.val();
   console.log("🔍 budgetCourses:", courses ? `${Object.keys(courses).length} entrées` : "null");
-  const flagsSnap = await get(ref(db, `users/${user.uid}`));
-  const flags = flagsSnap.val();
-  console.log("🔍 flags migration:", {
-    v1: flags?.groceryMigrationDone,
-    v2: flags?.groceryMigrationV2Done,
-    v3: flags?.groceryMigrationV3Done,
-  });
 };
 
 export const migrateGroceryToBudgetCourses = async (): Promise<{ success: boolean; migrated: number }> => {
@@ -125,8 +122,8 @@ export const migrateRemainingGroceries = async (): Promise<{ success: boolean; m
       return { success: false, migrated: 0 };
     }
 
-    const grocerySnap = await get(ref(db, `users/${user.uid}/finances/groceryExpenses`));
-    const rawGrocery  = grocerySnap.val();
+    const snap       = await get(ref(db, `users/${user.uid}/debt_snowball_data`));
+    const rawGrocery = snap.val()?.groceryExpenses;
     if (!rawGrocery) {
       await update(userRef, { groceryMigrationV2Done: true });
       return { success: true, migrated: 0 };
@@ -134,7 +131,7 @@ export const migrateRemainingGroceries = async (): Promise<{ success: boolean; m
 
     const allGrocery: Array<{ id: string; amount: number; label?: string; dateISO?: string; moyenPaiement?: string }> =
       Array.isArray(rawGrocery)
-        ? rawGrocery.filter(Boolean)
+        ? rawGrocery.filter(Boolean).map((v: any, i: number) => ({ id: String(i), ...v }))
         : Object.entries(rawGrocery).map(([k, v]) => ({ id: k, ...(v as object) }));
 
     // Lire les originalGroceryId déjà présents dans budgetCourses
@@ -193,8 +190,8 @@ export const migrateGroceryV3 = async (): Promise<{ success: boolean; migrated: 
     const userSnap = await get(userRef);
     if (userSnap.val()?.groceryMigrationV3Done) return { success: false, migrated: 0 };
 
-    const grocerySnap = await get(ref(db, `users/${user.uid}/finances/groceryExpenses`));
-    const rawGrocery  = grocerySnap.val();
+    const snap       = await get(ref(db, `users/${user.uid}/debt_snowball_data`));
+    const rawGrocery = snap.val()?.groceryExpenses;
 
     if (!rawGrocery) {
       await update(userRef, { groceryMigrationV3Done: true });
@@ -202,7 +199,7 @@ export const migrateGroceryV3 = async (): Promise<{ success: boolean; migrated: 
     }
 
     const allEntries: Array<Record<string, unknown>> = Array.isArray(rawGrocery)
-      ? rawGrocery.filter(Boolean)
+      ? rawGrocery.filter(Boolean).map((v: any, i: number) => ({ _key: String(i), ...v }))
       : Object.entries(rawGrocery).map(([k, v]) => ({ _key: k, ...(v as object) }));
 
     // Log la structure des 3 premières entrées pour debug
@@ -255,6 +252,78 @@ export const migrateGroceryV3 = async (): Promise<{ success: boolean; migrated: 
     return { success: true, migrated: toMigrate.length };
   } catch (error) {
     console.error("❌ Erreur migration V3:", error);
+    return { success: false, migrated: 0 };
+  }
+};
+
+// Migration V4 — chemin correct debt_snowball_data/groceryExpenses
+export const migrateGroceryV4 = async (): Promise<{ success: boolean; migrated: number }> => {
+  const user = auth.currentUser;
+  if (!user) return { success: false, migrated: 0 };
+
+  try {
+    const userRef  = ref(db, `users/${user.uid}`);
+    const userSnap = await get(userRef);
+    if (userSnap.val()?.groceryMigrationV4Done) return { success: false, migrated: 0 };
+
+    const snap       = await get(ref(db, `users/${user.uid}/debt_snowball_data`));
+    const rawGrocery = snap.val()?.groceryExpenses;
+
+    if (!rawGrocery) {
+      console.log("ℹ️ V4: aucune groceryExpenses dans debt_snowball_data");
+      await update(userRef, { groceryMigrationV4Done: true });
+      return { success: true, migrated: 0 };
+    }
+
+    const allEntries: Array<{ id: string; amount: number; date?: string; dateISO?: string; label?: string; name?: string; moyenPaiement?: string }> =
+      Array.isArray(rawGrocery)
+        ? rawGrocery.filter(Boolean).map((v: any, i: number) => ({ id: String(v.id ?? i), ...v }))
+        : Object.entries(rawGrocery).map(([k, v]) => ({ id: k, ...(v as any) }));
+
+    console.log(`🔍 V4: ${allEntries.length} groceries, exemple:`, JSON.stringify(allEntries[0]));
+
+    const existingSnap = await get(ref(db, `users/${user.uid}/budgetCourses`));
+    const existing = existingSnap.val() ?? {};
+    const alreadyMigratedIds = new Set(
+      Object.values(existing).map((e: any) => e.originalGroceryId).filter(Boolean)
+    );
+
+    const toMigrate = allEntries.filter((item) => {
+      if (alreadyMigratedIds.has(item.id)) return false;
+      return !!(item.dateISO ?? item.date);
+    });
+
+    console.log(`📊 V4: ${toMigrate.length} entrées à migrer`);
+
+    if (toMigrate.length === 0) {
+      await update(userRef, { groceryMigrationV4Done: true });
+      return { success: true, migrated: 0 };
+    }
+
+    const now = new Date().toISOString();
+    const writes = toMigrate.map((item) => {
+      const dateRaw = item.dateISO ?? item.date ?? "";
+      const dateStr = dateRaw.length >= 10 ? dateRaw.slice(0, 10) : dateRaw;
+      const entryId = `migrated-v4-${item.id}-${Math.random().toString(36).slice(2, 6)}`;
+      return set(ref(db, `users/${user.uid}/budgetCourses/${entryId}`), {
+        date:              dateStr,
+        montant:           Number(item.amount ?? 0),
+        moyenPaiement:     item.moyenPaiement ?? "Cash",
+        label:             item.label ?? item.name ?? "",
+        createdAt:         now,
+        updatedAt:         now,
+        source:            "migrated-v4",
+        originalGroceryId: item.id,
+      });
+    });
+
+    await Promise.all(writes);
+    await update(userRef, { groceryMigrationV4Done: true });
+
+    console.log(`✅ Migration V4 réussie : ${toMigrate.length} courses récupérées`);
+    return { success: true, migrated: toMigrate.length };
+  } catch (error) {
+    console.error("❌ Erreur migration V4:", error);
     return { success: false, migrated: 0 };
   }
 };
