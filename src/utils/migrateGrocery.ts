@@ -333,3 +333,57 @@ export const migrateGroceryV4 = async (): Promise<{ success: boolean; migrated: 
     return { success: false, migrated: 0 };
   }
 };
+
+function normalizePaymentMethod(raw: string): string {
+  switch (raw?.toLowerCase()) {
+    case "cb":      return "CB";
+    case "cash":    return "Cash";
+    case "retrait": return "Retrait";
+    case "cheque":
+    case "chèque":  return "Chèque";
+    default:        return "CB";
+  }
+}
+
+// Corrige les moyens de paiement mal migrés (paymentMethod → moyenPaiement)
+export const fixPaymentMethods = async (): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const userRef  = ref(db, `users/${user.uid}`);
+    const userSnap = await get(userRef);
+    if (userSnap.val()?.paymentMethodFixDone) return;
+
+    const [grocerySnap, coursesSnap] = await Promise.all([
+      get(ref(db, `users/${user.uid}/debt_snowball_data`)),
+      get(ref(db, `users/${user.uid}/budgetCourses`)),
+    ]);
+
+    const rawGrocery = grocerySnap.val()?.groceryExpenses;
+    const courses    = coursesSnap.val() ?? {};
+    if (!rawGrocery) { await update(userRef, { paymentMethodFixDone: true }); return; }
+
+    const groceryArr: any[] = Array.isArray(rawGrocery)
+      ? rawGrocery.filter(Boolean)
+      : Object.values(rawGrocery);
+
+    const fixes: Promise<void>[] = [];
+    for (const [key, entry] of Object.entries(courses) as [string, any][]) {
+      if (!["migrated-v3", "migrated-v4"].includes(entry.source)) continue;
+      const idx   = parseInt(entry.originalGroceryId ?? "", 10);
+      const orig  = isNaN(idx) ? null : groceryArr[idx];
+      const rawPm = orig?.paymentMethod ?? orig?.moyenPaiement ?? "";
+      const correct = normalizePaymentMethod(rawPm);
+      if (correct !== entry.moyenPaiement) {
+        fixes.push(update(ref(db, `users/${user.uid}/budgetCourses/${key}`), { moyenPaiement: correct }));
+      }
+    }
+
+    await Promise.all(fixes);
+    await update(userRef, { paymentMethodFixDone: true });
+    console.log(`✅ Moyens de paiement corrigés : ${fixes.length} entrées`);
+  } catch (error) {
+    console.error("❌ Erreur fixPaymentMethods:", error);
+  }
+};
