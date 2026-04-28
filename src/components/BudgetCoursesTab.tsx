@@ -236,12 +236,7 @@ export default function BudgetCoursesTab() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const totalDuMois = courses
-    .filter((c) => {
-      const [y, m] = c.date.split("-");
-      return parseInt(y) === currentYear && parseInt(m) === currentMonth;
-    })
-    .reduce((s, c) => s + c.montant, 0);
+  const totalDuMois = courses.reduce((s, c) => s + c.montant, 0);
 
   const restant = budgetPrevu - totalDuMois;
   const percentUsed = budgetPrevu > 0 ? (totalDuMois / budgetPrevu) * 100 : 0;
