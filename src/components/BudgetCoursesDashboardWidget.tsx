@@ -15,7 +15,7 @@ interface Props {
 
 export function BudgetCoursesDashboardWidget({ onNavigateToCourses }: Props) {
   const { user } = useAuth();
-  const { courses, loading, getTotalsByMonth } = useBudgetCourses();
+  const { courses, loading, getTotalsByMonth, totalGlobal } = useBudgetCourses();
   const [budgetPrevu, setBudgetPrevu] = useState(600);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function BudgetCoursesDashboardWidget({ onNavigateToCourses }: Props) {
   if (loading) return null;
 
   const now = new Date();
-  const totalDuMois = getTotalsByMonth(now.getFullYear(), now.getMonth() + 1);
+  const totalDuMois = totalGlobal;
   const restant = budgetPrevu - totalDuMois;
   const percentUsed = budgetPrevu > 0 ? (totalDuMois / budgetPrevu) * 100 : 0;
   const depassement = totalDuMois > budgetPrevu;
