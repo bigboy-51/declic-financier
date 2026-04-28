@@ -1132,6 +1132,27 @@ function AppMain() {
         )}
 
         {activeTab === "defis" && (
+          <>
+            {effectiveProfileType && (() => {
+              const p = getProfile(effectiveProfileType);
+              return (
+                <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-muted/50 border border-border mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{p.emoji}</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">{memberName || "Vous"}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => { await resetQuiz(); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  >
+                    Refaire le quiz
+                  </button>
+                </div>
+              );
+            })()}
           <Challenges
             challengeData={challenges.challengeData}
             dailyCompleted={challenges.dailyCompleted}
@@ -1140,6 +1161,7 @@ function AppMain() {
             totalPoints={rewards.rewards.totalPoints}
             currentStreak={rewards.rewards.currentStreak}
           />
+          </>
         )}
 
         {activeTab === "couple" && userProfile.userType === "couple" && (
