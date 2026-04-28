@@ -28,6 +28,7 @@ import { FirebaseDataProvider, useFirebaseData } from "@/context/FirebaseDataCon
 import { CoupleProfileModal } from "@/components/CoupleProfileModal";
 import { getProfile } from "@/lib/profiles";
 import { MessageToast } from "@/components/MessageToast";
+import { resetBudgetCourses } from "@/utils/resetBudgetCourses";
 import { SetupWizard } from "@/components/SetupWizard";
 import { EscalationSystem, EscalationDashboardCard, EscalationBanner } from "@/components/EscalationSystem";
 import { usePerProfileEscalation } from "@/hooks/usePerProfileEscalation";
@@ -1027,9 +1028,11 @@ function AppMain() {
               onNavigateToExpenses={() => setActiveTab("expenses")}
               onUpdateIncome={updateIncome}
               onUpdateStartingBalance={updateStartingBalance}
-              onCloseMonth={() => {
+              onCloseMonth={async () => {
                 try {
+                  const closedMonth = monthlyData.currentMonth;
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
+                  await resetBudgetCourses(closedMonth);
                   challenges.onMonthClosed(totalDebt);
                   resetLastPaymentMonth();
                   data.incomes.forEach((income) => {
@@ -1084,9 +1087,11 @@ function AppMain() {
               credits={data.credits}
               expenses={data.expenses}
               groceryExpenses={data.groceryExpenses}
-              onCloseMonth={() => {
+              onCloseMonth={async () => {
                 try {
+                  const closedMonth = monthlyData.currentMonth;
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
+                  await resetBudgetCourses(closedMonth);
                   resetLastPaymentMonth();
                   data.incomes.forEach((income) => {
                     updateIncome(income.id, { receivedDate: null });
