@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ref, set, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -98,23 +98,18 @@ function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddCharge
 
 interface EditChargeModalProps {
   charge: FlatCharge;
-  onSave: (charge: FlatCharge, name: string, prevu: number, reel: number) => void;
+  onSave: (charge: FlatCharge, name: string, prevu: number) => void;
   onClose: () => void;
 }
 
 function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
   const [name,  setName]  = useState(charge.name);
   const [prevu, setPrevu] = useState(String(charge.prevu));
-  const [reel,  setReel]  = useState(String(charge.reel));
-
-  const prevuNum   = parseFloat(prevu)  || 0;
-  const reelNum    = parseFloat(reel)   || 0;
-  const restantNum = prevuNum - reelNum;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave(charge, name.trim(), prevuNum, reelNum);
+    onSave(charge, name.trim(), parseFloat(prevu) || 0);
     onClose();
   };
 
@@ -136,48 +131,23 @@ function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Prévu (€)</label>
-              <input
-                data-testid="input-edit-charge-prevu"
-                type="number" min="0" step="0.01"
-                className={inputCls}
-                value={prevu}
-                onChange={(e) => setPrevu(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Réel (€)</label>
-              <input
-                data-testid="input-edit-charge-reel"
-                type="number" min="0" step="0.01"
-                className={inputCls}
-                value={reel}
-                onChange={(e) => setReel(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between px-1 py-1 rounded-xl bg-muted/50">
-            <span className="text-xs text-muted-foreground font-semibold">Restant</span>
-            <span className={`text-sm font-bold tabular-nums ${restantNum < 0 ? "text-red-500" : restantNum === 0 ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}>
-              {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(restantNum)}
-            </span>
+          <div>
+            <label className={labelCls}>Prévu (€)</label>
+            <input
+              data-testid="input-edit-charge-prevu"
+              type="number" min="0" step="0.01"
+              className={inputCls}
+              value={prevu}
+              onChange={(e) => setPrevu(e.target.value)}
+            />
           </div>
           <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              data-testid="button-edit-charge-cancel"
-              onClick={onClose}
-              className="flex-1 min-h-[44px] rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
-            >
+            <button type="button" data-testid="button-edit-charge-cancel" onClick={onClose}
+              className="flex-1 min-h-[44px] rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors">
               Annuler
             </button>
-            <button
-              type="submit"
-              data-testid="button-edit-charge-save"
-              className="flex-1 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
-            >
+            <button type="submit" data-testid="button-edit-charge-save"
+              className="flex-1 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity">
               Enregistrer
             </button>
           </div>
@@ -192,18 +162,44 @@ function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
 interface ChargeRowProps {
   charge: FlatCharge;
   globalLock: boolean;
+  onUpdateReel: (charge: FlatCharge, value: number) => void;
   onEdit: (charge: FlatCharge) => void;
   onDelete: (charge: FlatCharge) => void;
 }
 
-function ChargeRow({ charge, globalLock, onEdit, onDelete }: ChargeRowProps) {
+function ChargeRow({ charge, globalLock, onUpdateReel, onEdit, onDelete }: ChargeRowProps) {
+  const [editing, setEditing]   = useState(false);
+  const [editVal, setEditVal]   = useState(String(charge.reel));
+  const inputRef                = useRef<HTMLInputElement>(null);
+  const committedRef            = useRef(false);
+
+  const startEdit = () => {
+    if (globalLock) return;
+    committedRef.current = false;
+    setEditVal(String(charge.reel === 0 ? "" : charge.reel));
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 20);
+  };
+
+  const commit = () => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    setEditing(false);
+    onUpdateReel(charge, parseFloat(editVal) || 0);
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter")  { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { committedRef.current = true; setEditing(false); }
+  };
+
   const restant = charge.prevu - charge.reel;
   const over    = charge.reel > charge.prevu && charge.prevu > 0;
 
   return (
     <li
       className="grid items-center gap-1 px-3 py-2 hover:bg-muted/30 transition-colors border-b border-border/40 last:border-0"
-      style={{ gridTemplateColumns: "1fr 72px 72px 72px 56px" }}
+      style={{ gridTemplateColumns: "1fr 72px 88px 72px 56px" }}
       data-testid={`row-charge-${charge.id}`}
     >
       <span className="text-sm text-foreground font-medium truncate pr-1">{charge.name}</span>
@@ -212,9 +208,30 @@ function ChargeRow({ charge, globalLock, onEdit, onDelete }: ChargeRowProps) {
         {fmt(charge.prevu)}
       </span>
 
-      <span className={`text-xs text-right font-semibold tabular-nums ${over ? "text-red-500" : "text-foreground"}`}>
-        {fmt(charge.reel)}
-      </span>
+      {/* Réel — tap direct quand déverrouillé */}
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="number" min="0" step="0.01"
+          data-testid={`input-reel-${charge.id}`}
+          value={editVal}
+          onChange={(e) => setEditVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKey}
+          className="w-full text-right text-sm px-2 py-1 rounded-lg border border-primary bg-background text-foreground focus:outline-none tabular-nums"
+        />
+      ) : (
+        <button
+          data-testid={`button-reel-${charge.id}`}
+          onClick={startEdit}
+          disabled={globalLock}
+          className={`text-right text-sm font-semibold tabular-nums rounded-lg px-2 py-1 w-full transition-colors ${
+            globalLock ? "cursor-default" : "hover:bg-primary/10 cursor-text"
+          } ${over ? "text-red-500" : "text-foreground"}`}
+        >
+          {fmt(charge.reel)}
+        </button>
+      )}
 
       <span
         data-testid={`text-restant-${charge.id}`}
@@ -257,12 +274,13 @@ interface CategorySectionProps {
   icon: string;
   charges: FlatCharge[];
   globalLock: boolean;
+  onUpdateReel: (charge: FlatCharge, value: number) => void;
   onAddCharge: (categoryId: string) => void;
   onEdit: (charge: FlatCharge) => void;
   onDelete: (charge: FlatCharge) => void;
 }
 
-function CategorySection({ categoryId, name, icon, charges, globalLock, onAddCharge, onEdit, onDelete }: CategorySectionProps) {
+function CategorySection({ categoryId, name, icon, charges, globalLock, onUpdateReel, onAddCharge, onEdit, onDelete }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const prevu   = charges.reduce((s, c) => s + c.prevu, 0);
@@ -313,11 +331,13 @@ function CategorySection({ categoryId, name, icon, charges, globalLock, onAddCha
           {sorted.length > 0 && (
             <div
               className="grid px-3 py-1.5 bg-muted/40 border-y border-border/40"
-              style={{ gridTemplateColumns: "1fr 72px 72px 72px 56px" }}
+              style={{ gridTemplateColumns: "1fr 72px 88px 72px 56px" }}
             >
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Charge</span>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-right">Prévu</span>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-right">Réel</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                {globalLock ? "Réel" : "Réel ✏️"}
+              </span>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-right">Restant</span>
               <span />
             </div>
@@ -335,6 +355,7 @@ function CategorySection({ categoryId, name, icon, charges, globalLock, onAddCha
                   key={c.id}
                   charge={c}
                   globalLock={globalLock}
+                  onUpdateReel={onUpdateReel}
                   onEdit={onEdit}
                   onDelete={onDelete}
                 />
@@ -397,14 +418,26 @@ export default function ChargesTab() {
   }));
   const { totalPrevu, totalReel, totalRestant } = useChargesSummary(summaryInput);
 
-  const handleEditCharge = async (charge: FlatCharge, name: string, prevu: number, reel: number) => {
+  const handleUpdateReel = async (charge: FlatCharge, newReel: number) => {
     if (!user) return;
-    const prevuR  = parseFloat(prevu.toFixed(2));
-    const reelR   = parseFloat(reel.toFixed(2));
-    const restant = parseFloat((prevuR - reelR).toFixed(2));
+    const reel    = parseFloat(newReel.toFixed(2));
+    const restant = parseFloat((charge.prevu - reel).toFixed(2));
     try {
       await update(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
-        name, prevu: prevuR, reel: reelR, restant, updatedAt: new Date().toISOString(),
+        reel, restant, updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      toast({ description: "❌ Erreur lors de la sauvegarde", variant: "destructive" });
+    }
+  };
+
+  const handleEditCharge = async (charge: FlatCharge, name: string, prevu: number) => {
+    if (!user) return;
+    const prevuR  = parseFloat(prevu.toFixed(2));
+    const restant = parseFloat((prevuR - charge.reel).toFixed(2));
+    try {
+      await update(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
+        name, prevu: prevuR, restant, updatedAt: new Date().toISOString(),
       });
     } catch {
       toast({ description: "❌ Erreur lors de la sauvegarde", variant: "destructive" });
@@ -472,6 +505,7 @@ export default function ChargesTab() {
             icon={cat.icon}
             charges={catCharges}
             globalLock={globalLock}
+            onUpdateReel={handleUpdateReel}
             onAddCharge={(catId) => setAddModal({ categoryId: catId, categoryName: `${cat.icon} ${cat.name}` })}
             onEdit={setEditCharge}
             onDelete={(charge) => setConfirmDel(charge)}
