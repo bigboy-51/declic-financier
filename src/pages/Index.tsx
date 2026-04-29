@@ -31,6 +31,7 @@ import { CoupleProfileModal } from "@/components/CoupleProfileModal";
 import { getProfile } from "@/lib/profiles";
 import { MessageToast } from "@/components/MessageToast";
 import { resetBudgetCourses } from "@/utils/resetBudgetCourses";
+import { resetChargesReel } from "@/utils/resetCharges";
 import { SetupWizard } from "@/components/SetupWizard";
 import { EscalationSystem, EscalationDashboardCard, EscalationBanner } from "@/components/EscalationSystem";
 import { usePerProfileEscalation } from "@/hooks/usePerProfileEscalation";
@@ -1035,7 +1036,7 @@ function AppMain() {
                 try {
                   const closedMonth = monthlyData.currentMonth;
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
-                  await resetBudgetCourses(closedMonth);
+                  await Promise.all([resetBudgetCourses(closedMonth), resetChargesReel()]);
                   challenges.onMonthClosed(totalDebt);
                   resetLastPaymentMonth();
                   data.incomes.forEach((income) => {
@@ -1094,7 +1095,7 @@ function AppMain() {
                 try {
                   const closedMonth = monthlyData.currentMonth;
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
-                  await resetBudgetCourses(closedMonth);
+                  await Promise.all([resetBudgetCourses(closedMonth), resetChargesReel()]);
                   resetLastPaymentMonth();
                   data.incomes.forEach((income) => {
                     updateIncome(income.id, { receivedDate: null });
