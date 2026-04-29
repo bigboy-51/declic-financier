@@ -7,7 +7,7 @@ import { useChargesData, FlatCharge } from "@/hooks/useChargesData";
 import { useChargesSummary } from "@/hooks/useChargesSummary";
 import { ChargesRecap } from "@/components/ChargesRecap";
 import { migrateChargesToFirebase } from "@/utils/migrateCharges";
-import { patchCharges } from "@/utils/patchCharges";
+import { patchCharges, patchResetChargesReel } from "@/utils/patchCharges";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Lock, LockOpen } from "lucide-react";
 
@@ -384,6 +384,7 @@ export default function ChargesTab() {
   useEffect(() => {
     migrateChargesToFirebase().catch(console.error);
     patchCharges().catch(console.error);
+    patchResetChargesReel().catch(console.error);
   }, []);
 
   const summaryInput = charges.map((c) => ({

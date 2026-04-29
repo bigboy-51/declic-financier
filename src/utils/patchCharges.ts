@@ -26,38 +26,61 @@ export const patchCharges = async (): Promise<void> => {
   const now = new Date().toISOString();
   const writes: Promise<void>[] = [];
 
-  // Add new charges (skip if already exists)
   for (const charge of NEW_CHARGES) {
     const chargeRef = ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`);
     const snap = await get(chargeRef);
     if (!snap.exists()) {
-      writes.push(
-        set(chargeRef, {
-          name: charge.name,
-          prevu: charge.prevu,
-          reel: 0,
-          restant: charge.prevu,
-          locked: false,
-          createdAt: now,
-          updatedAt: now,
-        })
-      );
+      writes.push(set(chargeRef, {
+        name: charge.name, prevu: charge.prevu, reel: 0,
+        restant: charge.prevu, locked: false, createdAt: now, updatedAt: now,
+      }));
     }
   }
 
-  // Fix prevu amounts
   for (const fix of AMOUNT_FIXES) {
     const chargeRef = ref(db, `users/${user.uid}/charges/${fix.categoryId}/rubriques/${fix.id}`);
     const snap = await get(chargeRef);
     if (snap.exists()) {
       const current = snap.val();
       const restant = parseFloat((fix.prevu - (current.reel ?? 0)).toFixed(2));
-      writes.push(
-        update(chargeRef, { prevu: fix.prevu, restant, updatedAt: now })
-      );
+      writes.push(update(chargeRef, { prevu: fix.prevu, restant, updatedAt: now }));
     }
   }
 
   await Promise.all(writes);
   await update(userRef, { chargesPatchV1Done: true, chargesPatchV2Done: true });
 };
+
+// Remet tous les réels à 0 une seule fois (correctif post-clôture avril)
+export const patchResetChargesReel = async (): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userRef = ref(db, `users/${user.uid}`);
+  const userSnap = await get(userRef);
+  if (userSnap.val()?.chargesReelResetMai2026Done) return;
+
+  const chargesSnap = await get(ref(db, `users/${user.uid}/charges`));
+  const raw = chargesSnap.val();
+  if (!raw) return;
+
+  const writes: Promise<void>[] = [];
+  const now = new Date().toISOString();
+
+  for (const [catId, catVal] of Object.entries(raw) as [string, any][]) {
+    const rubriques = catVal?.rubriques ?? {};
+    for (const [rubId, rub] of Object.entries(rubriques) as [string, any][]) {
+      const prevu = Number(rub.prevu ?? 0);
+      if (Number(rub.reel ?? 0) !== 0) {
+        writes.push(update(
+          ref(db, `users/${user.uid}/charges/${catId}/rubriques/${rubId}`),
+          { reel: 0, restant: prevu, updatedAt: now }
+        ));
+      }
+    }
+  }
+
+  await Promise.all(writes);
+  await update(userRef, { chargesReelResetMai2026Done: true });
+};
+
