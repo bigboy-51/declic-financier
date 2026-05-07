@@ -189,40 +189,29 @@ export const DashboardHero = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`font-bold ${isReceived ? "text-green-600 dark:text-green-400" : "text-primary"}`}>{fmt(income.amount)}</span>
-                    {isReceived ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">reçu le {receivedDay}</span>
-                    ) : hasDate ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">prévu le {rd}</span>
-                    ) : (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">date non définie</span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isReceived) {
+                          handleMarkPending(income.id);
+                        } else {
+                          handleMarkReceived(income.id);
+                        }
+                      }}
+                      disabled={isSaving}
+                      className={`text-xs px-2 py-1 rounded font-bold transition ${
+                        isReceived
+                          ? "bg-green-500/15 text-green-600 dark:text-green-400 hover:bg-green-500/25"
+                          : "bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20"
+                      } disabled:opacity-60`}
+                      title={isReceived ? "Cliquer pour annuler la reception du salaire" : hasDate ? `Prevu le ${rd}` : "Date non definie"}
+                      data-testid={`button-income-received-inline-${income.id}`}
+                    >
+                      {isReceived ? `Salaire recu le ${receivedDay}` : "Salaire recu"}
+                    </button>
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (!isReceived) handleMarkReceived(income.id); }}
-                    disabled={isSaving || isReceived}
-                    className={`flex-1 min-h-[40px] px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
-                      isReceived
-                        ? "bg-green-500/15 text-green-600 dark:text-green-400 cursor-default"
-                        : "bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20"
-                    } disabled:opacity-80`}
-                    data-testid={`button-mark-received-${income.id}`}
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5" />
-                    {isReceived ? `Salaire reçu le ${receivedDay}` : "Salaire reçu"}
-                  </button>
-                  {isReceived && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleMarkPending(income.id); }}
-                      disabled={isSaving}
-                      className="min-h-[40px] px-3 py-1.5 text-xs font-medium rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition disabled:opacity-50"
-                      data-testid={`button-mark-pending-${income.id}`}
-                    >
-                      Annuler
-                    </button>
-                  )}
                 </div>
               </div>
             );
