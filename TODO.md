@@ -4,23 +4,9 @@
 
 ---
 
-## 🟠 Fonctionnel
-
-### Calendrier dépenses variables
-- Date picker sur chaque dépense variable
-- Tri par date
-- Total par semaine affiché
-
-
-### Bouton "Défi complété" — comportement
-- Stopper le clignotement après 5 sec max (vérifier si encore actif)
-
----
-
----
-
 ## ✅ Fait
 
+- Calendrier dépenses variables — tri par date, total par semaine, date picker pré-rempli à aujourd'hui
 - Date salaire éditable depuis dashboard — date picker inline avec choix jour+mois, affichage "reçu le X avr."
 - Route `/diag` — diagnostic Firebase (flags, solde étape par étape, incohérences)
 - Harmonie visuelle ChargesTab — ChargesRecap aligné sur le design system (tokens, rounded-2xl, barre de progression)
