@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ref, set, update, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -7,7 +7,7 @@ import { useChargesData, FlatCharge } from "@/hooks/useChargesData";
 import { useChargesSummary } from "@/hooks/useChargesSummary";
 import { ChargesRecap } from "@/components/ChargesRecap";
 import { migrateChargesToFirebase } from "@/utils/migrateCharges";
-import { patchCharges } from "@/utils/patchCharges";
+import { patchCharges, patchResetChargesReel } from "@/utils/patchCharges";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Lock, LockOpen } from "lucide-react";
 
@@ -103,7 +103,7 @@ interface EditChargeModalProps {
 }
 
 function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
-  const [name, setName] = useState(charge.name);
+  const [name,  setName]  = useState(charge.name);
   const [prevu, setPrevu] = useState(String(charge.prevu));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,47 +113,41 @@ function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
     onClose();
   };
 
+  const inputCls = "w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+  const labelCls = "text-xs font-semibold text-muted-foreground mb-1 block";
+
   return (
     <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-xl p-5 space-y-4">
         <h2 className="font-bold text-foreground text-base">Modifier la charge</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nom</label>
+            <label className={labelCls}>Nom</label>
             <input
               autoFocus
               data-testid="input-edit-charge-name"
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className={inputCls}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Montant prévu (€)</label>
+            <label className={labelCls}>Prévu (€)</label>
             <input
               data-testid="input-edit-charge-prevu"
-              type="number"
-              min="0"
-              step="0.01"
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              type="number" min="0" step="0.01"
+              className={inputCls}
               value={prevu}
               onChange={(e) => setPrevu(e.target.value)}
             />
           </div>
           <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              data-testid="button-edit-charge-cancel"
-              onClick={onClose}
-              className="flex-1 min-h-[44px] rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
-            >
+            <button type="button" data-testid="button-edit-charge-cancel" onClick={onClose}
+              className="flex-1 min-h-[44px] rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors">
               Annuler
             </button>
-            <button
-              type="submit"
-              data-testid="button-edit-charge-save"
-              className="flex-1 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
-            >
+            <button type="submit" data-testid="button-edit-charge-save"
+              className="flex-1 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity">
               Enregistrer
             </button>
           </div>
@@ -174,30 +168,29 @@ interface ChargeRowProps {
 }
 
 function ChargeRow({ charge, globalLock, onUpdateReel, onEdit, onDelete }: ChargeRowProps) {
-  const [editing, setEditing] = useState(false);
-  const [editVal, setEditVal] = useState(String(charge.reel));
-  const inputRef = useRef<HTMLInputElement>(null);
-  const committedRef = useRef(false);
+  const [editing, setEditing]   = useState(false);
+  const [editVal, setEditVal]   = useState(String(charge.reel));
+  const inputRef                = useRef<HTMLInputElement>(null);
+  const committedRef            = useRef(false);
 
-  const handleStartEdit = () => {
+  const startEdit = () => {
     if (globalLock) return;
     committedRef.current = false;
-    setEditVal(String(charge.reel));
+    setEditVal(String(charge.reel === 0 ? "" : charge.reel));
     setEditing(true);
-    setTimeout(() => inputRef.current?.select(), 30);
+    setTimeout(() => inputRef.current?.select(), 20);
   };
 
-  const handleCommit = () => {
+  const commit = () => {
     if (committedRef.current) return;
     committedRef.current = true;
-    const v = parseFloat(editVal) || 0;
     setEditing(false);
-    onUpdateReel(charge, v);
+    onUpdateReel(charge, parseFloat(editVal) || 0);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") { e.preventDefault(); handleCommit(); }
-    if (e.key === "Escape") { committedRef.current = true; setEditing(false); setEditVal(String(charge.reel)); }
+    if (e.key === "Enter")  { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { committedRef.current = true; setEditing(false); }
   };
 
   const restant = charge.prevu - charge.reel;
@@ -209,43 +202,37 @@ function ChargeRow({ charge, globalLock, onUpdateReel, onEdit, onDelete }: Charg
       style={{ gridTemplateColumns: "1fr 72px 88px 72px 56px" }}
       data-testid={`row-charge-${charge.id}`}
     >
-      {/* Name */}
       <span className="text-sm text-foreground font-medium truncate pr-1">{charge.name}</span>
 
-      {/* Prévu */}
       <span className="text-xs text-right text-muted-foreground font-medium tabular-nums">
         {fmt(charge.prevu)}
       </span>
 
-      {/* Réel — inline editable when not globally locked */}
+      {/* Réel — tap direct quand déverrouillé */}
       {editing ? (
         <input
           ref={inputRef}
-          type="number"
-          min="0"
-          step="0.01"
+          type="number" min="0" step="0.01"
           data-testid={`input-reel-${charge.id}`}
           value={editVal}
           onChange={(e) => setEditVal(e.target.value)}
-          onBlur={handleCommit}
+          onBlur={commit}
           onKeyDown={handleKey}
-          className="w-full text-right text-sm px-2 py-1 rounded-lg border border-primary bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 tabular-nums"
+          className="w-full text-right text-sm px-2 py-1 rounded-lg border border-primary bg-background text-foreground focus:outline-none tabular-nums"
         />
       ) : (
         <button
           data-testid={`button-reel-${charge.id}`}
-          onClick={handleStartEdit}
+          onClick={startEdit}
           disabled={globalLock}
-          className={`text-right text-sm font-semibold tabular-nums rounded-lg px-2 py-1 transition-colors ${
-            globalLock ? "cursor-default" : "hover:bg-primary/10"
+          className={`text-right text-sm font-semibold tabular-nums rounded-lg px-2 py-1 w-full transition-colors ${
+            globalLock ? "cursor-default" : "hover:bg-primary/10 cursor-text"
           } ${over ? "text-red-500" : "text-foreground"}`}
-          title={globalLock ? undefined : "Cliquer pour modifier"}
         >
           {fmt(charge.reel)}
         </button>
       )}
 
-      {/* Restant */}
       <span
         data-testid={`text-restant-${charge.id}`}
         className={`text-xs text-right font-bold tabular-nums ${
@@ -255,7 +242,6 @@ function ChargeRow({ charge, globalLock, onUpdateReel, onEdit, onDelete }: Charg
         {fmt(restant)}
       </span>
 
-      {/* Actions: pencil + trash (visible only when globally unlocked) */}
       <div className="flex items-center justify-end gap-0.5">
         {!globalLock && (
           <button
@@ -419,6 +405,7 @@ export default function ChargesTab() {
   useEffect(() => {
     migrateChargesToFirebase().catch(console.error);
     patchCharges().catch(console.error);
+    patchResetChargesReel().catch(console.error);
   }, []);
 
   const summaryInput = charges.map((c) => ({
@@ -434,7 +421,7 @@ export default function ChargesTab() {
   const handleUpdateReel = async (charge: FlatCharge, newReel: number) => {
     if (!user) return;
     const reel    = parseFloat(newReel.toFixed(2));
-    const restant = parseFloat((charge.prevu - newReel).toFixed(2));
+    const restant = parseFloat((charge.prevu - reel).toFixed(2));
     try {
       await update(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
         reel, restant, updatedAt: new Date().toISOString(),
@@ -446,11 +433,11 @@ export default function ChargesTab() {
 
   const handleEditCharge = async (charge: FlatCharge, name: string, prevu: number) => {
     if (!user) return;
-    const prevuRounded  = parseFloat(prevu.toFixed(2));
-    const restant       = parseFloat((prevuRounded - charge.reel).toFixed(2));
+    const prevuR  = parseFloat(prevu.toFixed(2));
+    const restant = parseFloat((prevuR - charge.reel).toFixed(2));
     try {
       await update(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
-        name, prevu: prevuRounded, restant, updatedAt: new Date().toISOString(),
+        name, prevu: prevuR, restant, updatedAt: new Date().toISOString(),
       });
     } catch {
       toast({ description: "❌ Erreur lors de la sauvegarde", variant: "destructive" });

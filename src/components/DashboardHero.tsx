@@ -49,6 +49,7 @@ interface DashboardHeroProps {
   onNavigateToExpenses?: () => void;
   userType?: UserType | null;
   profileType?: ProfileType | null;
+  dynamicBalance?: number;
 }
 
 const fmt = (n: number) =>
@@ -58,11 +59,9 @@ export const DashboardHero = ({
   totalIncome,
   startingBalance,
   incomes,
-  expenses,
   onUpdateIncome,
   onUpdateStartingBalance,
-  groceryExpenses = [],
-  appliedCreditsAmount = 0,
+  dynamicBalance: dynamicBalanceProp,
 }: DashboardHeroProps): JSX.Element => {
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceValue, setBalanceValue] = useState(startingBalance);
@@ -71,10 +70,8 @@ export const DashboardHero = ({
   const [incomeDateValue, setIncomeDateValue] = useState(1);
   const [savingIncomeId, setSavingIncomeId] = useState<string | null>(null);
 
-  const totalGrocerySpent = groceryExpenses.reduce((sum, e) => sum + e.amount, 0);
   const receivedSalaries = incomes.reduce((sum, i) => sum + (i.receivedDate ? i.amount : 0), 0);
-  const totalFixedSpent = expenses.reduce((sum, e) => sum + e.actualAmount, 0);
-  const dynamicBalance = startingBalance + receivedSalaries - totalGrocerySpent - totalFixedSpent - appliedCreditsAmount;
+  const dynamicBalance = dynamicBalanceProp ?? startingBalance + receivedSalaries;
 
   const startEditingIncome = (income: { id: string; amount: number; receiptDate?: number }) => {
     setEditingIncomeId(income.id);
