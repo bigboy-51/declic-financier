@@ -1,4 +1,4 @@
-import { Component, ReactNode } from "react";
+import { Component, ReactNode, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+
+const Diag = lazy(() => import("./pages/Diag"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -65,6 +67,11 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/diag" element={
+                <Suspense fallback={<div className="p-8 text-sm text-gray-400">Chargement…</div>}>
+                  <Diag />
+                </Suspense>
+              } />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

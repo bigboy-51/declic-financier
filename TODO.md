@@ -2,11 +2,6 @@
 
 ## 🔴 Important / Dev
 
-### Route `/diag` — diagnostic développeur
-Page lazy-loadée, invisible du nav, accessible via URL directe.
-Affiche : totaux par système, flags Firebase, solde calculé étape par étape, incohérences détectées.
-But : permettre un diagnostic rapide par capture d'écran.
-
 ---
 
 ## 🟠 Fonctionnel
@@ -34,6 +29,7 @@ But : permettre un diagnostic rapide par capture d'écran.
 
 ## ✅ Fait
 
+- Route `/diag` — diagnostic Firebase (flags, solde étape par étape, incohérences)
 - Charges éditables (nom, prévu, réel, restant) + verrou global
 - Ajout charges : Thérapeute, Docteur, SNCF, Darty Serv., Darty, Travaux
 - Pharmacie fixe → 50 € / Entretien voiture → 50 €
