@@ -11,8 +11,6 @@
 - Tri par date
 - Total par semaine affiché
 
-### Date salaire éditable depuis le dashboard
-- Modifier le jour ET le mois de réception du salaire directement depuis la carte Revenus
 
 ### Bouton "Défi complété" — comportement
 - Stopper le clignotement après 5 sec max (vérifier si encore actif)
@@ -23,6 +21,7 @@
 
 ## ✅ Fait
 
+- Date salaire éditable depuis dashboard — date picker inline avec choix jour+mois, affichage "reçu le X avr."
 - Route `/diag` — diagnostic Firebase (flags, solde étape par étape, incohérences)
 - Harmonie visuelle ChargesTab — ChargesRecap aligné sur le design system (tokens, rounded-2xl, barre de progression)
 - Bouton "Défi complété" clignotement — déjà corrigé (confetti stops après 3s avec forwards)

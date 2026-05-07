@@ -69,6 +69,8 @@ export const DashboardHero = ({
   const [incomeAmountValue, setIncomeAmountValue] = useState(0);
   const [incomeDateValue, setIncomeDateValue] = useState(1);
   const [savingIncomeId, setSavingIncomeId] = useState<string | null>(null);
+  const [markingReceivedId, setMarkingReceivedId] = useState<string | null>(null);
+  const [receivedDateValue, setReceivedDateValue] = useState(() => new Date().toISOString().split("T")[0]);
 
   const receivedSalaries = incomes.reduce((sum, i) => sum + (i.receivedDate ? i.amount : 0), 0);
   const dynamicBalance = dynamicBalanceProp ?? startingBalance + receivedSalaries;
@@ -79,11 +81,14 @@ export const DashboardHero = ({
     setIncomeDateValue(income.receiptDate ?? 1);
   };
 
-  const handleMarkReceived = (id: string) => {
-    const d = new Date();
-    onUpdateIncome(id, {
-      receivedDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
-    });
+  const startMarkingReceived = (id: string) => {
+    setReceivedDateValue(new Date().toISOString().split("T")[0]);
+    setMarkingReceivedId(id);
+  };
+
+  const confirmMarkReceived = (id: string) => {
+    onUpdateIncome(id, { receivedDate: receivedDateValue });
+    setMarkingReceivedId(null);
   };
 
   const handleIncomeSave = (id: string) => {
@@ -145,9 +150,12 @@ export const DashboardHero = ({
             const rd = income.receiptDate;
             const hasDate = rd !== undefined && rd >= 1 && rd <= 31;
             const isReceived = !!income.receivedDate;
-            const receivedDay = isReceived ? new Date(income.receivedDate!).getDate() : null;
+            const receivedLabel = isReceived
+              ? new Date(income.receivedDate! + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+              : null;
             const isEditing = editingIncomeId === income.id;
             const isSaving = savingIncomeId === income.id;
+            const isMarkingReceived = markingReceivedId === income.id;
 
             if (isEditing) {
               return (
@@ -182,7 +190,7 @@ export const DashboardHero = ({
                   <div className="flex items-center gap-2">
                     <span className={`font-bold ${isReceived ? "text-green-600 dark:text-green-400" : "text-primary"}`}>{fmt(income.amount)}</span>
                     {isReceived ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">reçu le {receivedDay}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">reçu le {receivedLabel}</span>
                     ) : hasDate ? (
                       <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">prévu le {rd}</span>
                     ) : (
@@ -191,14 +199,38 @@ export const DashboardHero = ({
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                 </div>
-                {!isReceived && (
+                {!isReceived && !isMarkingReceived && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleMarkReceived(income.id); }}
+                    onClick={(e) => { e.stopPropagation(); startMarkingReceived(income.id); }}
                     className="w-full min-h-[40px] px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20 transition flex items-center justify-center gap-1.5"
                     data-testid={`button-mark-received-${income.id}`}
                   >
                     ✅ Marquer comme reçu
                   </button>
+                )}
+                {!isReceived && isMarkingReceived && (
+                  <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={receivedDateValue}
+                      onChange={(e) => setReceivedDateValue(e.target.value)}
+                      className="flex-1 min-h-[40px] px-3 py-1.5 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      data-testid={`input-received-date-${income.id}`}
+                    />
+                    <button
+                      onClick={() => confirmMarkReceived(income.id)}
+                      className="min-h-[40px] px-3 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 transition"
+                      data-testid={`button-confirm-received-${income.id}`}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={() => setMarkingReceivedId(null)}
+                      className="min-h-[40px] px-3 rounded-lg bg-muted text-muted-foreground text-xs hover:bg-muted/80 transition"
+                    >
+                      ✗
+                    </button>
+                  </div>
                 )}
               </div>
             );
