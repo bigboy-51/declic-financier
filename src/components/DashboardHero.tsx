@@ -69,8 +69,6 @@ export const DashboardHero = ({
   const [incomeAmountValue, setIncomeAmountValue] = useState(0);
   const [incomeDateValue, setIncomeDateValue] = useState(1);
   const [savingIncomeId, setSavingIncomeId] = useState<string | null>(null);
-  const [markingReceivedId, setMarkingReceivedId] = useState<string | null>(null);
-  const [receivedDateValue, setReceivedDateValue] = useState(() => new Date().toISOString().split("T")[0]);
 
   const receivedSalaries = incomes.reduce((sum, i) => sum + (i.receivedDate ? i.amount : 0), 0);
   const dynamicBalance = dynamicBalanceProp ?? startingBalance + receivedSalaries;
@@ -81,14 +79,19 @@ export const DashboardHero = ({
     setIncomeDateValue(income.receiptDate ?? 1);
   };
 
-  const startMarkingReceived = (id: string) => {
-    setReceivedDateValue(new Date().toISOString().split("T")[0]);
-    setMarkingReceivedId(id);
+  const handleMarkReceived = (id: string) => {
+    const d = new Date();
+    setSavingIncomeId(id);
+    onUpdateIncome(id, {
+      receivedDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+    });
+    setTimeout(() => setSavingIncomeId(null), 500);
   };
 
-  const confirmMarkReceived = (id: string) => {
-    onUpdateIncome(id, { receivedDate: receivedDateValue });
-    setMarkingReceivedId(null);
+  const handleMarkPending = (id: string) => {
+    setSavingIncomeId(id);
+    onUpdateIncome(id, { receivedDate: null });
+    setTimeout(() => setSavingIncomeId(null), 500);
   };
 
   const handleIncomeSave = (id: string) => {
@@ -155,7 +158,6 @@ export const DashboardHero = ({
               : null;
             const isEditing = editingIncomeId === income.id;
             const isSaving = savingIncomeId === income.id;
-            const isMarkingReceived = markingReceivedId === income.id;
 
             if (isEditing) {
               return (
@@ -178,60 +180,36 @@ export const DashboardHero = ({
             }
 
             return (
-              <div key={income.id} className="space-y-1" data-testid={`income-row-${income.id}`}>
+              <div key={income.id} className={`flex justify-between items-center text-sm min-h-[44px] px-2 rounded-lg transition ${isSaving ? "opacity-50" : ""}`} data-testid={`income-row-${income.id}`}>
                 <div
-                  className={`flex justify-between items-center text-sm min-h-[44px] px-2 rounded-lg cursor-pointer hover:bg-muted/50 transition ${isSaving ? "opacity-50" : ""}`}
+                  className="flex items-center gap-2 flex-1 cursor-pointer hover:bg-muted/50 rounded-lg px-1 py-1 transition"
                   onClick={() => startEditingIncome(income)}
                 >
-                  <div className="flex items-center gap-2">
-                    {isReceived ? <CalendarCheck className="w-4 h-4 text-green-500" /> : <CalendarClock className="w-4 h-4 text-muted-foreground" />}
-                    <span className={isReceived ? "text-green-600 dark:text-green-400 font-medium" : "text-muted-foreground"}>{income.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold ${isReceived ? "text-green-600 dark:text-green-400" : "text-primary"}`}>{fmt(income.amount)}</span>
-                    {isReceived ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">reçu le {receivedLabel}</span>
-                    ) : hasDate ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">prévu le {rd}</span>
-                    ) : (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">date non définie</span>
-                    )}
-                    <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
+                  {isReceived ? <CalendarCheck className="w-4 h-4 text-green-500 shrink-0" /> : <CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <span className={isReceived ? "text-green-600 dark:text-green-400 font-medium" : "text-muted-foreground"}>{income.name}</span>
+                  <Pencil className="w-3 h-3 text-muted-foreground/40" />
                 </div>
-                {!isReceived && !isMarkingReceived && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`font-bold ${isReceived ? "text-green-600 dark:text-green-400" : "text-primary"}`}>{fmt(income.amount)}</span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); startMarkingReceived(income.id); }}
-                    className="w-full min-h-[40px] px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20 transition flex items-center justify-center gap-1.5"
-                    data-testid={`button-mark-received-${income.id}`}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isReceived) handleMarkPending(income.id);
+                      else handleMarkReceived(income.id);
+                    }}
+                    disabled={isSaving}
+                    className={`text-xs px-2 py-1 rounded-lg font-bold transition ${
+                      isReceived
+                        ? "bg-green-500/15 text-green-600 dark:text-green-400 hover:bg-green-500/25"
+                        : "bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20"
+                    } disabled:opacity-60`}
+                    title={isReceived ? "Cliquer pour annuler" : hasDate ? `Prévu le ${rd}` : "Date non définie"}
+                    data-testid={`button-income-received-inline-${income.id}`}
                   >
-                    ✅ Marquer comme reçu
+                    {isReceived ? `✓ ${receivedLabel}` : "Reçu ?"}
                   </button>
-                )}
-                {!isReceived && isMarkingReceived && (
-                  <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="date"
-                      value={receivedDateValue}
-                      onChange={(e) => setReceivedDateValue(e.target.value)}
-                      className="flex-1 min-h-[40px] px-3 py-1.5 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                      data-testid={`input-received-date-${income.id}`}
-                    />
-                    <button
-                      onClick={() => confirmMarkReceived(income.id)}
-                      className="min-h-[40px] px-3 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600 transition"
-                      data-testid={`button-confirm-received-${income.id}`}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      onClick={() => setMarkingReceivedId(null)}
-                      className="min-h-[40px] px-3 rounded-lg bg-muted text-muted-foreground text-xs hover:bg-muted/80 transition"
-                    >
-                      ✗
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
             );
           })}
