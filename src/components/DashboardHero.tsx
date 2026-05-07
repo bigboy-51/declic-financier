@@ -81,9 +81,17 @@ export const DashboardHero = ({
 
   const handleMarkReceived = (id: string) => {
     const d = new Date();
+    setSavingIncomeId(id);
     onUpdateIncome(id, {
       receivedDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
     });
+    setTimeout(() => setSavingIncomeId(null), 500);
+  };
+
+  const handleMarkPending = (id: string) => {
+    setSavingIncomeId(id);
+    onUpdateIncome(id, { receivedDate: null });
+    setTimeout(() => setSavingIncomeId(null), 500);
   };
 
   const handleIncomeSave = (id: string) => {
@@ -191,15 +199,31 @@ export const DashboardHero = ({
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                 </div>
-                {!isReceived && (
+                <div className="flex gap-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleMarkReceived(income.id); }}
-                    className="w-full min-h-[40px] px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20 transition flex items-center justify-center gap-1.5"
+                    onClick={(e) => { e.stopPropagation(); if (!isReceived) handleMarkReceived(income.id); }}
+                    disabled={isSaving || isReceived}
+                    className={`flex-1 min-h-[40px] px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
+                      isReceived
+                        ? "bg-green-500/15 text-green-600 dark:text-green-400 cursor-default"
+                        : "bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20"
+                    } disabled:opacity-80`}
                     data-testid={`button-mark-received-${income.id}`}
                   >
-                    ✅ Marquer comme reçu
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    {isReceived ? `Salaire reçu le ${receivedDay}` : "Salaire reçu"}
                   </button>
-                )}
+                  {isReceived && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleMarkPending(income.id); }}
+                      disabled={isSaving}
+                      className="min-h-[40px] px-3 py-1.5 text-xs font-medium rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition disabled:opacity-50"
+                      data-testid={`button-mark-pending-${income.id}`}
+                    >
+                      Annuler
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
