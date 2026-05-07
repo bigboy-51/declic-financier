@@ -468,11 +468,11 @@ export default function ChargesTab() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-3 max-w-lg mx-auto w-full">
+    <div className="px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
 
-      {/* ── Lock toggle ── */}
-      <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Charges mensuelles</p>
+      {/* ── En-tête + verrou ── */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-foreground">Charges mensuelles</h2>
         <button
           onClick={toggleLock}
           data-testid="button-global-lock"

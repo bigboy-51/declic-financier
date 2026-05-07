@@ -19,17 +19,13 @@
 
 ---
 
-## 🟡 UX / UI
-
-### Harmonie visuelle ChargesTab
-- Espacement cohérent entre les sections
-- Typographie alignée avec le reste de l'app
-
 ---
 
 ## ✅ Fait
 
 - Route `/diag` — diagnostic Firebase (flags, solde étape par étape, incohérences)
+- Harmonie visuelle ChargesTab — ChargesRecap aligné sur le design system (tokens, rounded-2xl, barre de progression)
+- Bouton "Défi complété" clignotement — déjà corrigé (confetti stops après 3s avec forwards)
 - Charges éditables (nom, prévu, réel, restant) + verrou global
 - Ajout charges : Thérapeute, Docteur, SNCF, Darty Serv., Darty, Travaux
 - Pharmacie fixe → 50 € / Entretien voiture → 50 €
