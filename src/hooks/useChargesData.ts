@@ -11,8 +11,15 @@ export interface FlatCharge {
   reel: number;
   restant: number;
   locked: boolean;
+  entries?: ChargeSpendEntry[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ChargeSpendEntry {
+  id: string;
+  dateISO: string;
+  amount: number;
 }
 
 export interface ChargesSummary {
@@ -41,6 +48,15 @@ export function useChargesData() {
           const prevu  = Number(rub.prevu  ?? 0);
           const reel   = Number(rub.reel   ?? 0);
           const storedRestant = rub.restant !== undefined ? Number(rub.restant) : prevu - reel;
+          const entriesRaw = (rub.entries ?? {}) as Record<string, Record<string, unknown>>;
+          const entries = Object.entries(entriesRaw)
+            .map(([entryId, entry]) => ({
+              id: entryId,
+              dateISO: String(entry.dateISO ?? ""),
+              amount: Number(entry.amount ?? 0),
+            }))
+            .filter((entry) => entry.dateISO && entry.amount > 0);
+
           flat.push({
             id: rubId,
             categoryId: catId,
@@ -49,6 +65,7 @@ export function useChargesData() {
             reel,
             restant: storedRestant,
             locked: Boolean(rub.locked),
+            entries,
             createdAt: rub.createdAt as string | undefined,
             updatedAt: rub.updatedAt as string | undefined,
           });
