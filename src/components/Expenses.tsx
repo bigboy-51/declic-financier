@@ -153,16 +153,18 @@ export function Expenses({
   };
 
   const VARIABLE_NAMES = new Set([
-    "Essence", "Cadeau", "Pharmacie fixe",
-    "Travaux", "Entretien voiture", "Loisirs famille",
+    "Essence", "Cadeau", "Pharmacie", "Pharmacie fixe",
+    "Thérapeute", "Travaux", "Entretien voiture", "Loisirs famille",
   ]);
 
   const isVariable = (expense: Expense) => VARIABLE_NAMES.has(expense.name);
 
   const getVariableLabel = (name: string) => {
     if (name === "Pharmacie fixe") return "Pharmacie";
+    if (name === "Pharmacie") return "Pharmacie";
     if (name === "Entretien voiture") return "Entretien voiture";
     if (name === "Loisirs famille") return "Loisirs famille";
+    if (name === "Thérapeute") return "Thérapeute";
     return name;
   };
 

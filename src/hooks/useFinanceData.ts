@@ -221,6 +221,7 @@ function buildFromRaw(raw: any): FinanceData {
     Essence: { entries: base.variableSpends?.Essence?.entries ?? [] },
     Cadeau: { entries: base.variableSpends?.Cadeau?.entries ?? [] },
     Pharmacie: { entries: base.variableSpends?.Pharmacie?.entries ?? [] },
+    Thérapeute: { entries: base.variableSpends?.Thérapeute?.entries ?? [] },
     Travaux: { entries: base.variableSpends?.Travaux?.entries ?? [] },
     "Entretien voiture": {
       entries: base.variableSpends?.["Entretien voiture"]?.entries ?? [],
@@ -445,6 +446,7 @@ export function useFinanceData(
         Essence: { entries: [] },
         Cadeau: { entries: [] },
         Pharmacie: { entries: [] },
+        Thérapeute: { entries: [] },
         Travaux: { entries: [] },
         "Entretien voiture": { entries: [] },
         "Loisirs famille": { entries: [] },
