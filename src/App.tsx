@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
+import IndexV2 from "./pages/IndexV2";
 import NotFound from "./pages/NotFound";
 
 const Diag = lazy(() => import("./pages/Diag"));
@@ -67,6 +68,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/v2" element={<IndexV2 />} />
               <Route path="/diag" element={
                 <Suspense fallback={<div className="p-8 text-sm text-gray-400">Chargement…</div>}>
                   <Diag />
