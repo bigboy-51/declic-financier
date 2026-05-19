@@ -11,6 +11,7 @@ export interface FlatCharge {
   reel: number;
   restant: number;
   locked: boolean;
+  hasDatedEntries?: boolean;
   entries?: ChargeSpendEntry[];
   createdAt?: string;
   updatedAt?: string;
@@ -65,6 +66,7 @@ export function useChargesData() {
             reel,
             restant: storedRestant,
             locked: Boolean(rub.locked),
+            hasDatedEntries: Boolean(rub.hasDatedEntries),
             entries,
             createdAt: rub.createdAt as string | undefined,
             updatedAt: rub.updatedAt as string | undefined,
