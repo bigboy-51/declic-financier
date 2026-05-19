@@ -10,6 +10,8 @@ import { migrateChargesToFirebase } from "@/utils/migrateCharges";
 import { patchCharges, patchResetChargesReel } from "@/utils/patchCharges";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Lock, LockOpen, CalendarDays, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 function fmt(n: number): string {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n);
@@ -19,7 +21,7 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-const DATED_REEL_CHARGE_IDS = new Set(["pharmacie-fixe", "travaux", "essence", "therapeute"]);
+const DATED_REEL_CHARGE_IDS = new Set(["pharmacie-fixe", "travaux", "essence", "therapeute", "loisirs-famille"]);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -365,13 +367,30 @@ function DatedChargeRow({ charge, globalLock, onAddEntry, onDeleteEntry, onEdit,
       {expanded && !globalLock && (
         <div className="px-3 pb-3 pt-1 bg-muted/20">
           <form onSubmit={handleAddEntry} className="grid grid-cols-[1fr_90px_34px] gap-2 items-center">
-            <input
-              type="date"
-              data-testid={`input-entry-date-${charge.id}`}
-              value={entryDate}
-              onChange={(e) => setEntryDate(e.target.value)}
-              className="min-h-[34px] rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  data-testid={`button-date-picker-${charge.id}`}
+                  className="min-h-[34px] rounded-lg border border-border bg-background px-2 text-xs text-foreground hover:bg-muted/50 transition-colors text-left"
+                >
+                  {entryDate ? formatShortDate(entryDate) : "Sélectionner date"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={entryDate ? new Date(entryDate + "T00:00:00") : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setEntryDate(date.toISOString().slice(0, 10));
+                    }
+                  }}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             <input
               type="number"
               min="0"
