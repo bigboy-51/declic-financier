@@ -7,7 +7,7 @@ import { useChargesData, FlatCharge } from "@/hooks/useChargesData";
 import { useChargesSummary } from "@/hooks/useChargesSummary";
 import { ChargesRecap } from "@/components/ChargesRecap";
 import { migrateChargesToFirebase } from "@/utils/migrateCharges";
-import { patchCharges, patchResetChargesReel, patchDatedCharges } from "@/utils/patchCharges";
+import { patchCharges, patchResetChargesReel } from "@/utils/patchCharges";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, Lock, LockOpen, CalendarDays, X } from "lucide-react";
 
@@ -19,6 +19,8 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+
+const DATED_REEL_CHARGE_IDS = new Set(["pharmacie-fixe", "soin-medical", "travaux", "essence"]);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -35,19 +37,18 @@ function formatShortDate(dateISO: string): string {
 interface AddChargeModalProps {
   categoryId: string;
   categoryName: string;
-  onSave: (categoryId: string, name: string, prevu: number, hasDatedEntries: boolean) => void;
+  onSave: (categoryId: string, name: string, prevu: number) => void;
   onClose: () => void;
 }
 
 function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddChargeModalProps) {
   const [name, setName] = useState("");
   const [prevu, setPrevu] = useState("");
-  const [hasDatedEntries, setHasDatedEntries] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave(categoryId, name.trim(), parseFloat(prevu) || 0, hasDatedEntries);
+    onSave(categoryId, name.trim(), parseFloat(prevu) || 0);
     onClose();
   };
 
@@ -83,19 +84,6 @@ function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddCharge
               onChange={(e) => setPrevu(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="add-dated-entries"
-              data-testid="checkbox-add-dated-entries"
-              checked={hasDatedEntries}
-              onChange={(e) => setHasDatedEntries(e.target.checked)}
-              className="w-4 h-4 rounded border border-border bg-background cursor-pointer"
-            />
-            <label htmlFor="add-dated-entries" className="text-xs font-semibold text-muted-foreground cursor-pointer">
-              Ajouter des entrées datées
-            </label>
-          </div>
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -123,19 +111,18 @@ function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddCharge
 
 interface EditChargeModalProps {
   charge: FlatCharge;
-  onSave: (charge: FlatCharge, name: string, prevu: number, hasDatedEntries: boolean) => void;
+  onSave: (charge: FlatCharge, name: string, prevu: number) => void;
   onClose: () => void;
 }
 
 function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
   const [name,  setName]  = useState(charge.name);
   const [prevu, setPrevu] = useState(String(charge.prevu));
-  const [hasDatedEntries, setHasDatedEntries] = useState(charge.hasDatedEntries ?? false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave(charge, name.trim(), parseFloat(prevu) || 0, hasDatedEntries);
+    onSave(charge, name.trim(), parseFloat(prevu) || 0);
     onClose();
   };
 
@@ -166,19 +153,6 @@ function EditChargeModal({ charge, onSave, onClose }: EditChargeModalProps) {
               value={prevu}
               onChange={(e) => setPrevu(e.target.value)}
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="edit-dated-entries"
-              data-testid="checkbox-edit-dated-entries"
-              checked={hasDatedEntries}
-              onChange={(e) => setHasDatedEntries(e.target.checked)}
-              className="w-4 h-4 rounded border border-border bg-background cursor-pointer"
-            />
-            <label htmlFor="edit-dated-entries" className="text-xs font-semibold text-muted-foreground cursor-pointer">
-              Entrées datées
-            </label>
           </div>
           <div className="flex gap-2 pt-1">
             <button type="button" data-testid="button-edit-charge-cancel" onClick={onClose}
@@ -528,7 +502,7 @@ function CategorySection({ categoryId, name, icon, charges, globalLock, onUpdate
               </li>
             ) : (
               sorted.map((c) => (
-                c.hasDatedEntries ? (
+                DATED_REEL_CHARGE_IDS.has(c.id) ? (
                   <DatedChargeRow
                     key={c.id}
                     charge={c}
@@ -595,7 +569,6 @@ export default function ChargesTab() {
     migrateChargesToFirebase().catch(console.error);
     patchCharges().catch(console.error);
     patchResetChargesReel().catch(console.error);
-    patchDatedCharges().catch(console.error);
   }, []);
 
   const summaryInput = charges.map((c) => ({
@@ -662,25 +635,25 @@ export default function ChargesTab() {
     }
   };
 
-  const handleEditCharge = async (charge: FlatCharge, name: string, prevu: number, hasDatedEntries: boolean) => {
+  const handleEditCharge = async (charge: FlatCharge, name: string, prevu: number) => {
     if (!user) return;
     const prevuR  = parseFloat(prevu.toFixed(2));
     const restant = parseFloat((prevuR - charge.reel).toFixed(2));
     try {
       await update(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
-        name, prevu: prevuR, restant, hasDatedEntries, updatedAt: new Date().toISOString(),
+        name, prevu: prevuR, restant, updatedAt: new Date().toISOString(),
       });
     } catch {
       toast({ description: "❌ Erreur lors de la sauvegarde", variant: "destructive" });
     }
   };
 
-  const handleAddCharge = async (categoryId: string, name: string, prevu: number, hasDatedEntries: boolean) => {
+  const handleAddCharge = async (categoryId: string, name: string, prevu: number) => {
     if (!user) return;
     const id  = generateId();
     const now = new Date().toISOString();
     await set(ref(db, `users/${user.uid}/charges/${categoryId}/rubriques/${id}`), {
-      name, prevu, reel: 0, restant: prevu, locked: false, hasDatedEntries, createdAt: now, updatedAt: now,
+      name, prevu, reel: 0, restant: prevu, locked: false, createdAt: now, updatedAt: now,
     });
   };
 
