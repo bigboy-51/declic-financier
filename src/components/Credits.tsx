@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, CreditCard as CreditCardIcon, Lock, Unlock, Play, CheckCircle2, Edit2 } from 'lucide-react';
 import { Credit } from '@/types/finance';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreditsProps {
   credits: Credit[];
@@ -193,6 +194,7 @@ function CreditItem({ credit, locked, onUpdate, onDelete }: CreditItemProps) {
   const [editingRemaining, setEditingRemaining] = useState(false);
   const [newRemaining, setNewRemaining] = useState(credit.remainingAmount);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { toast } = useToast();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -213,7 +215,10 @@ function CreditItem({ credit, locked, onUpdate, onDelete }: CreditItemProps) {
   const handleConfirmRemaining = () => {
     // Validation
     if (newRemaining <= 0) {
-      alert('Le montant doit être supérieur à 0€. Utilisez "Rembourser intégralement" si c\'est réglé.');
+      toast({
+        description: 'Le montant doit être supérieur à 0€. Utilisez "Rembourser intégralement" si c\'est réglé.',
+        variant: 'destructive',
+      });
       return;
     }
     setShowConfirm(true);
