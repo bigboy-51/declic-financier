@@ -21,7 +21,6 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-const DATED_REEL_CHARGE_IDS = new Set(["pharmacie-fixe", "travaux", "essence", "therapeute", "loisirs-famille"]);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -38,18 +37,19 @@ function formatShortDate(dateISO: string): string {
 interface AddChargeModalProps {
   categoryId: string;
   categoryName: string;
-  onSave: (categoryId: string, name: string, prevu: number) => void;
+  onSave: (categoryId: string, name: string, prevu: number, dated?: boolean) => void;
   onClose: () => void;
 }
 
 function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddChargeModalProps) {
   const [name, setName] = useState("");
   const [prevu, setPrevu] = useState("");
+  const [dated, setDated] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave(categoryId, name.trim(), parseFloat(prevu) || 0);
+    onSave(categoryId, name.trim(), parseFloat(prevu) || 0, dated);
     onClose();
   };
 
@@ -85,6 +85,16 @@ function AddChargeModal({ categoryId, categoryName, onSave, onClose }: AddCharge
               onChange={(e) => setPrevu(e.target.value)}
             />
           </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={dated}
+              onChange={(e) => setDated(e.target.checked)}
+              className="w-4 h-4 rounded border-border"
+              data-testid="checkbox-add-charge-dated"
+            />
+            <span className="text-xs font-medium text-muted-foreground">📅 Utiliser un calendrier</span>
+          </label>
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -520,7 +530,7 @@ function CategorySection({ categoryId, name, icon, charges, globalLock, onUpdate
               </li>
             ) : (
               sorted.map((c) => (
-                DATED_REEL_CHARGE_IDS.has(c.id) ? (
+                c.dated ? (
                   <DatedChargeRow
                     key={c.id}
                     charge={c}
@@ -666,12 +676,12 @@ export default function ChargesTab() {
     }
   };
 
-  const handleAddCharge = async (categoryId: string, name: string, prevu: number) => {
+  const handleAddCharge = async (categoryId: string, name: string, prevu: number, dated: boolean = false) => {
     if (!user) return;
     const id  = generateId();
     const now = new Date().toISOString();
     await set(ref(db, `users/${user.uid}/charges/${categoryId}/rubriques/${id}`), {
-      name, prevu, reel: 0, restant: prevu, locked: false, createdAt: now, updatedAt: now,
+      name, prevu, reel: 0, restant: prevu, locked: false, dated, createdAt: now, updatedAt: now,
     });
   };
 
