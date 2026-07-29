@@ -2,6 +2,8 @@
 
 ## 🔴 Important / Dev
 
+- **Graphique évolution crédits** — LineChart 12 mois (une courbe par crédit actif), montant restant en Y-axis, mois en X-axis. Scope: ~1h30, utiliser Recharts (déjà en dépendances), pas de bloatware
+
 ---
 
 ## ✅ Fait
