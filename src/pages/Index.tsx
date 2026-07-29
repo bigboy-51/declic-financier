@@ -1094,6 +1094,7 @@ function AppMain() {
               monthlyHistory={monthlyHistory}
               credits={data.credits}
               allMonths={monthlyData.getAllMonths()}
+              currentMonth={monthlyData.currentMonth}
             />
             <MonthlyReset
               currentMonth={monthlyData.currentMonth}

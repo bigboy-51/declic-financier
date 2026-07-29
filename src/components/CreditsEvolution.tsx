@@ -7,6 +7,7 @@ interface CreditsEvolutionProps {
   monthlyHistory: Record<string, any>;
   credits: Credit[];
   allMonths: string[];
+  currentMonth?: string;
 }
 
 const COLORS = [
@@ -24,6 +25,7 @@ export function CreditsEvolution({
   monthlyHistory,
   credits,
   allMonths,
+  currentMonth,
 }: CreditsEvolutionProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -48,6 +50,16 @@ export function CreditsEvolution({
 
     return point;
   });
+
+  // Add current month with live data
+  if (currentMonth) {
+    const currentShortMonth = currentMonth.split("-")[1];
+    const currentPoint: Record<string, any> = { month: currentShortMonth, isCurrent: true };
+    activeCredits.forEach((credit) => {
+      currentPoint[credit.id] = credit.remainingAmount;
+    });
+    chartData.push(currentPoint);
+  }
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("fr-FR", {
