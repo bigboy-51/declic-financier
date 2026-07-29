@@ -383,8 +383,8 @@ function AppMain() {
 
   const monthlyData = useMonthlyData(monthlyHistory, saveMonthlyHistory);
   const rewards = useRewards(data.credits, data.expenses, rewardsData, saveRewardsData);
-  const { charges } = useChargesData();
-  const { totalGlobal: coursesTotal } = useBudgetCourses();
+  const { charges, loading: chargesLoading } = useChargesData();
+  const { totalGlobal: coursesTotal, loading: coursesLoading } = useBudgetCourses();
   const { toasts, toast, dismiss } = useToast();
 
   useEffect(() => {
@@ -414,6 +414,8 @@ function AppMain() {
       }
     }
   }, [notifications, currentProfile, markNotificationSeen]);
+
+  const isLoadingBalance = chargesLoading || coursesLoading;
 
   const dynamicBalance = useMemo(() => {
     const receivedSalaries = data.incomes.reduce(
@@ -1025,6 +1027,7 @@ function AppMain() {
               surplus={surplus}
               startingBalance={data.startingBalance}
               dynamicBalance={dynamicBalance}
+              isLoadingBalance={isLoadingBalance}
               incomes={data.incomes}
               credits={data.credits}
               projection={projection}

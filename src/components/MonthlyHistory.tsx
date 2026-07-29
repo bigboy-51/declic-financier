@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingDown, TrendingUp } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Credit } from "@/types/finance";
 
 interface MonthlyHistoryProps {
@@ -33,6 +34,20 @@ export function MonthlyHistory({
       currency: "EUR",
     }).format(value);
 
+  const chartData = allMonths.map((month) => {
+    const snap = monthlyHistory[month];
+    const shortMonth = month.split("-")[1]; // "01", "02", etc
+    return {
+      month: shortMonth,
+      expenses: snap?.totals?.totalActualExpenses || 0,
+    };
+  });
+
+  const trend = chartData.length >= 2
+    ? chartData[chartData.length - 1].expenses - chartData[0].expenses
+    : 0;
+  const trendDirection = trend > 0 ? "up" : trend < 0 ? "down" : "stable";
+
   if (allMonths.length === 0) {
     return null;
   }
@@ -44,7 +59,11 @@ export function MonthlyHistory({
         className="flex items-center justify-between w-full text-sm font-medium"
         data-testid="button-monthly-history-toggle"
       >
-        <span>Historique mensuel ({allMonths.length} mois)</span>
+        <div className="flex items-center gap-2">
+          <span>Historique mensuel ({allMonths.length} mois)</span>
+          {trendDirection === "up" && <TrendingUp className="w-4 h-4 text-red-500" />}
+          {trendDirection === "down" && <TrendingDown className="w-4 h-4 text-green-600" />}
+        </div>
         {expanded ? (
           <ChevronUp className="w-4 h-4" />
         ) : (
@@ -53,7 +72,43 @@ export function MonthlyHistory({
       </button>
 
       {expanded && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-4">
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  style={{ color: 'var(--muted-foreground)' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  stroke="currentColor"
+                  style={{ color: 'var(--muted-foreground)' }}
+                  width={40}
+                />
+                <Tooltip
+                  formatter={(value) => formatCurrency(value as number)}
+                  contentStyle={{
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px'
+                  }}
+                  cursor={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="expenses"
+                  stroke="var(--primary)"
+                  dot={false}
+                  strokeWidth={2}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2">
           {allMonths.map((month) => {
             const snap = monthlyHistory[month];
             if (!snap) return null;

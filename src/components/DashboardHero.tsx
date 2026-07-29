@@ -50,6 +50,7 @@ interface DashboardHeroProps {
   userType?: UserType | null;
   profileType?: ProfileType | null;
   dynamicBalance?: number;
+  isLoadingBalance?: boolean;
 }
 
 const fmt = (n: number) =>
@@ -62,6 +63,7 @@ export const DashboardHero = ({
   onUpdateIncome,
   onUpdateStartingBalance,
   dynamicBalance: dynamicBalanceProp,
+  isLoadingBalance,
 }: DashboardHeroProps): JSX.Element => {
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceValue, setBalanceValue] = useState(startingBalance);
@@ -131,6 +133,8 @@ export const DashboardHero = ({
                 <button onClick={handleBalanceSave} className="text-primary text-sm font-bold min-w-[44px] min-h-[44px] flex items-center justify-center" data-testid="button-save-balance">✓</button>
                 <button onClick={() => setEditingBalance(false)} className="text-muted-foreground text-sm min-w-[44px] min-h-[44px] flex items-center justify-center">✗</button>
               </div>
+            ) : isLoadingBalance ? (
+              <div className="h-8 w-32 bg-muted rounded-lg mt-1 animate-pulse" />
             ) : (
               <p
                 onClick={() => { setBalanceValue(startingBalance); setEditingBalance(true); }}

@@ -43,6 +43,7 @@ export const migrateChargesToFirebase = async (): Promise<boolean> => {
 
     // AJOUTER LES CHARGES MIGRÉES
     console.log(`➕ Injection de ${chargesMigratedData.length} charges...`);
+    const datedChargeIds = new Set(["pharmacie-fixe", "travaux", "essence", "therapeute", "loisirs-famille"]);
     const writes = chargesMigratedData.map((charge) =>
       set(ref(db, `users/${user.uid}/charges/${charge.categoryId}/rubriques/${charge.id}`), {
         name: charge.name,
@@ -50,6 +51,7 @@ export const migrateChargesToFirebase = async (): Promise<boolean> => {
         reel: parseFloat(charge.montantReel.toFixed(2)),
         locked: !charge.custom,
         custom: charge.custom,
+        dated: datedChargeIds.has(charge.id),
         createdAt: now,
         updatedAt: now,
       })
