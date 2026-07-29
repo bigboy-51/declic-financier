@@ -10,6 +10,7 @@ import { useChallenges } from "@/hooks/useChallenges";
 import { MonthlyReset } from "@/components/MonthlyReset";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
 import { CreditsEvolution } from "@/components/CreditsEvolution";
+import { SurplusModal } from "@/components/SurplusModal";
 
 const Credits = lazy(() => import("@/components/Credits").then((m) => ({ default: m.Credits })));
 const ChargesTab = lazy(() => import("@/components/ChargesTab"));
@@ -106,6 +107,14 @@ function AppMain() {
   const [escalationCompletedProfile, setEscalationCompletedProfile] = useState<ProfileType | null>(null);
   const [escalationBannerDismissedThisSession, setEscalationBannerDismissedThisSession] = useState(false);
 
+  // Surplus allocation
+  const [showSurplusModal, setShowSurplusModal] = useState(false);
+  const [pendingSurplus, setPendingSurplus] = useState(0);
+  const [snowballAuto, setSnowballAuto] = useState(() => {
+    const saved = localStorage.getItem("snowball-auto");
+    return saved ? JSON.parse(saved) : true;
+  });
+
   const [currentProfile, setCurrentProfile] = useState<CoupleProfile | null>(() => {
     const saved = localStorage.getItem("currentProfile");
     if (saved === "boss_profile") return "boss";
@@ -160,6 +169,21 @@ function AppMain() {
     localStorage.removeItem("currentProfile");
     setCurrentProfile(null);
     setShowSettings(false);
+  };
+
+  const handleApplySurplus = async (creditId: string) => {
+    const credit = data.credits.find((c) => c.id === creditId);
+    if (!credit) return;
+
+    updateCredit(creditId, {
+      monthlyPayment: credit.monthlyPayment + pendingSurplus,
+    });
+    toast({
+      title: "Surplus appliqué",
+      description: `${pendingSurplus.toFixed(2)}€ ajouté à ${credit.name}`,
+    });
+    setShowSurplusModal(false);
+    setPendingSurplus(0);
   };
 
   // ── Derived constants (all declared before any useEffect) ──────────────────
@@ -1040,21 +1064,27 @@ function AppMain() {
                 try {
                   const closedMonth = monthlyData.currentMonth;
 
-                  // Auto Snowball: apply surplus to smallest credit
                   if (surplus > 0) {
-                    const unsettledCredits = data.credits
-                      .filter((c) => !c.settled && c.remainingAmount > 0)
-                      .sort((a, b) => a.remainingAmount - b.remainingAmount);
-
-                    if (unsettledCredits.length > 0) {
-                      const smallest = unsettledCredits[0];
-                      updateCredit(smallest.id, {
-                        monthlyPayment: smallest.monthlyPayment + surplus,
-                      });
-                      toast({
-                        title: "🎯 Snowball Auto",
-                        description: `Surplus de ${surplus.toFixed(2)}€ appliqué à ${smallest.name}`,
-                      });
+                    if (snowballAuto) {
+                      // Auto mode: apply to smallest credit
+                      const unsettledCredits = data.credits
+                        .filter((c) => !c.settled && c.remainingAmount > 0)
+                        .sort((a, b) => a.remainingAmount - b.remainingAmount);
+                      if (unsettledCredits.length > 0) {
+                        const smallest = unsettledCredits[0];
+                        updateCredit(smallest.id, {
+                          monthlyPayment: smallest.monthlyPayment + surplus,
+                        });
+                        toast({
+                          title: "🎯 Snowball Auto",
+                          description: `${surplus.toFixed(2)}€ → ${smallest.name}`,
+                        });
+                      }
+                    } else {
+                      // Manual mode: show modal
+                      setPendingSurplus(surplus);
+                      setShowSurplusModal(true);
+                      return;
                     }
                   }
 
@@ -1066,7 +1096,7 @@ function AppMain() {
                     updateIncome(income.id, { receivedDate: null });
                   });
                   toast({
-                    title: "Mois clôturé",
+                    title: "Mois clôturé ✓",
                     description: "Les données ont été archivées et le nouveau mois est prêt.",
                   });
                 } catch (error) {
@@ -1124,21 +1154,27 @@ function AppMain() {
                 try {
                   const closedMonth = monthlyData.currentMonth;
 
-                  // Auto Snowball: apply surplus to smallest credit
                   if (surplus > 0) {
-                    const unsettledCredits = data.credits
-                      .filter((c) => !c.settled && c.remainingAmount > 0)
-                      .sort((a, b) => a.remainingAmount - b.remainingAmount);
-
-                    if (unsettledCredits.length > 0) {
-                      const smallest = unsettledCredits[0];
-                      updateCredit(smallest.id, {
-                        monthlyPayment: smallest.monthlyPayment + surplus,
-                      });
-                      toast({
-                        title: "🎯 Snowball Auto",
-                        description: `Surplus de ${surplus.toFixed(2)}€ appliqué à ${smallest.name}`,
-                      });
+                    if (snowballAuto) {
+                      // Auto mode: apply to smallest credit
+                      const unsettledCredits = data.credits
+                        .filter((c) => !c.settled && c.remainingAmount > 0)
+                        .sort((a, b) => a.remainingAmount - b.remainingAmount);
+                      if (unsettledCredits.length > 0) {
+                        const smallest = unsettledCredits[0];
+                        updateCredit(smallest.id, {
+                          monthlyPayment: smallest.monthlyPayment + surplus,
+                        });
+                        toast({
+                          title: "🎯 Snowball Auto",
+                          description: `${surplus.toFixed(2)}€ → ${smallest.name}`,
+                        });
+                      }
+                    } else {
+                      // Manual mode: show modal
+                      setPendingSurplus(surplus);
+                      setShowSurplusModal(true);
+                      return;
                     }
                   }
 
@@ -1149,7 +1185,7 @@ function AppMain() {
                     updateIncome(income.id, { receivedDate: null });
                   });
                   toast({
-                    title: "Mois clôturé",
+                    title: "Mois clôturé ✓",
                     description: "Les données ont été archivées et le nouveau mois est prêt.",
                   });
                 } catch (error) {
@@ -1370,6 +1406,14 @@ function AppMain() {
           onNavigate={() => { setActiveTab("couple"); setMessageNotif(null); }}
         />
       )}
+
+      <SurplusModal
+        isOpen={showSurplusModal}
+        surplus={pendingSurplus}
+        credits={data.credits}
+        onApply={handleApplySurplus}
+        onCancel={() => setShowSurplusModal(false)}
+      />
     </div>
   );
 }
