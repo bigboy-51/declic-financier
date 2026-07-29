@@ -9,6 +9,7 @@ import { useRewards } from "@/hooks/useRewards";
 import { useChallenges } from "@/hooks/useChallenges";
 import { MonthlyReset } from "@/components/MonthlyReset";
 import { MonthlyHistory } from "@/components/MonthlyHistory";
+import { CreditsEvolution } from "@/components/CreditsEvolution";
 
 const Credits = lazy(() => import("@/components/Credits").then((m) => ({ default: m.Credits })));
 const ChargesTab = lazy(() => import("@/components/ChargesTab"));
@@ -1088,6 +1089,11 @@ function AppMain() {
               monthlyPayment={totalCredits}
               credits={data.credits}
               projection={projection}
+            />
+            <CreditsEvolution
+              monthlyHistory={monthlyHistory}
+              credits={data.credits}
+              allMonths={monthlyData.getAllMonths()}
             />
             <MonthlyReset
               currentMonth={monthlyData.currentMonth}
