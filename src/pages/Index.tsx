@@ -1039,6 +1039,25 @@ function AppMain() {
               onCloseMonth={async () => {
                 try {
                   const closedMonth = monthlyData.currentMonth;
+
+                  // Auto Snowball: apply surplus to smallest credit
+                  if (surplus > 0) {
+                    const unsettledCredits = data.credits
+                      .filter((c) => !c.settled && c.remainingAmount > 0)
+                      .sort((a, b) => a.remainingAmount - b.remainingAmount);
+
+                    if (unsettledCredits.length > 0) {
+                      const smallest = unsettledCredits[0];
+                      updateCredit(smallest.id, {
+                        monthlyPayment: smallest.monthlyPayment + surplus,
+                      });
+                      toast({
+                        title: "🎯 Snowball Auto",
+                        description: `Surplus de ${surplus.toFixed(2)}€ appliqué à ${smallest.name}`,
+                      });
+                    }
+                  }
+
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
                   await Promise.all([resetBudgetCourses(closedMonth), resetChargesReel()]);
                   challenges.onMonthClosed(totalDebt);
@@ -1104,11 +1123,34 @@ function AppMain() {
               onCloseMonth={async () => {
                 try {
                   const closedMonth = monthlyData.currentMonth;
+
+                  // Auto Snowball: apply surplus to smallest credit
+                  if (surplus > 0) {
+                    const unsettledCredits = data.credits
+                      .filter((c) => !c.settled && c.remainingAmount > 0)
+                      .sort((a, b) => a.remainingAmount - b.remainingAmount);
+
+                    if (unsettledCredits.length > 0) {
+                      const smallest = unsettledCredits[0];
+                      updateCredit(smallest.id, {
+                        monthlyPayment: smallest.monthlyPayment + surplus,
+                      });
+                      toast({
+                        title: "🎯 Snowball Auto",
+                        description: `Surplus de ${surplus.toFixed(2)}€ appliqué à ${smallest.name}`,
+                      });
+                    }
+                  }
+
                   monthlyData.closeMonth(data.credits, data.expenses, data.groceryExpenses);
                   await Promise.all([resetBudgetCourses(closedMonth), resetChargesReel()]);
                   resetLastPaymentMonth();
                   data.incomes.forEach((income) => {
                     updateIncome(income.id, { receivedDate: null });
+                  });
+                  toast({
+                    title: "Mois clôturé",
+                    description: "Les données ont été archivées et le nouveau mois est prêt.",
                   });
                 } catch (error) {
                   console.error("❌ Erreur clôture:", error);
